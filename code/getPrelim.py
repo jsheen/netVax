@@ -15,6 +15,7 @@ Created on Thu Jun 23 09:33:36 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import statistics
+import multiprocessing as mp
 import networkx as nx
 from collections import defaultdict, Counter
 import EoN
@@ -35,8 +36,8 @@ for i in Ns:
                 for m in morts:
                     param_sets.append([i, j, k, l , m])
                    
-# Find day of intervention and transmission rate for R0 -----------------------
-for param_set in param_sets:
+# Function to find day of intervention and transmission rates for R0s ---------
+def getPrelim(param_set):
     N_cluster = param_set[0]
     k_overdispersion = param_set[1]
     R0_wt = param_set[2]
@@ -204,8 +205,10 @@ for param_set in param_sets:
         out_f.write(",")
         out_f.write(str(interrupt_t))
     
-    
-
+if __name__ == '__main__':
+    pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
+    pool.map(runSim, param_sets)
+    pool.close()
     
     
     
