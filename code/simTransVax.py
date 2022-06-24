@@ -15,7 +15,7 @@ Created on Tue Jun  7 19:30:09 2022
 # Import libraries and set seeds ----------------------------------------------
 import numpy as np
 import networkx as nx
-import pickle
+import matplotlib.pyplot as plt
 from collections import defaultdict
 import EoN
 import math
@@ -127,41 +127,34 @@ def runSim(param_set):
         if abs(len(assign_treat) - len(assign_control)) > 1:
             raise NameError("Unequal treatment and control groups.")
         full_second_half = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
-        surv_inf = dict.fromkeys(G.nodes(), -1)
-        surv_dead = dict.fromkeys(G.nodes(), -1)
+        t_no_inf = full_second_half.t()[np.where((full_second_half.I() == 0) & (full_second_half.summary()[1]['E'] == 0))[0][0]]
+        surv_inf = dict.fromkeys(G.nodes(), t_no_inf)
+        surv_dead = dict.fromkeys(G.nodes(), t_no_inf)
         for node in G.nodes():
             node_hist = full_second_half.node_history(node)
-            if 'I' in node_hist[1] and node_hist[1][0] != 'I':
+            if 'I' in node_hist[1]:
                 surv_inf[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'I')[0][0]]
-            if 'D' in node_hist[1] and node_hist[1][0] != 'D':
-                surv_inf[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
-            
-                
-
-        
-        
-        
-        for t_dex in range(int(np.floor(full_second_half.t()[-1]))):
-            t_statuses = full_second_half.get_statuses(list(G.nodes()), t_dex)
-            for node2check in not_inf:
-                if t_statuses
-            
-        
-        
-        with open(home + '/netVax/code_output/sims/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_sim' + str(sim_num) + '.pickle', 'wb') as handle:
-            pickle.dump(full_second_half, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(home + '/netVax/code_output/assignments/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
-            out_f.write('Treatment:')
-            out_f.write('\n')
-            for assign_dex in range(len(assign_treat)):
-                out_f.write(str(assign_treat[assign_dex]))
+            if 'D' in node_hist[1]:
+                surv_dead[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
+                if node_hist[1][0] == 'D':
+                    surv_inf[node] = -1
+        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
+            out_f.write('node,assignment,time2inf,time2death\n')
+            for node in G.nodes():
+                out_f.write(str(node))
+                out_f.write(',')
+                if node in assign_treat and node not in assign_control:
+                    out_f.write('t')
+                elif node not in assign_treat and node in assign_control:
+                    out_f.write('c')
+                elif node not in assign_treat and node not in assign_control:
+                    out_f.write('na')
+                out_f.write(',')
+                out_f.write(str(surv_inf.get(node)))
+                out_f.write(',')
+                out_f.write(str(surv_dead.get(node)))
                 out_f.write('\n')
-            out_f.write('Control:')
-            out_f.write('\n')
-            for assign_dex in range(len(assign_control)):
-                out_f.write(str(assign_control[assign_dex]))
-                out_f.write('\n')
-
+            
 if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(runSim, param_sets)
