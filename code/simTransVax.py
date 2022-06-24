@@ -15,7 +15,6 @@ Created on Tue Jun  7 19:30:09 2022
 # Import libraries and set seeds ----------------------------------------------
 import numpy as np
 import networkx as nx
-import matplotlib.pyplot as plt
 from collections import defaultdict
 import EoN
 import math
