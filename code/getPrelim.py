@@ -207,7 +207,7 @@ def getPrelim(param_set):
     
 if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
-    pool.map(runSim, param_sets)
+    pool.map(getPrelim, param_sets)
     pool.close()
     
     
