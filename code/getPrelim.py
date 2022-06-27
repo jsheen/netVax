@@ -25,7 +25,7 @@ home = str(Path.home())
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000, 10000]
 overdispersions = [1]
-R0_wts = [2]
+R0_wts = [2.5]
 R0_vaxs = [1.5]
 morts = [0.7]
 param_sets = []
@@ -209,27 +209,6 @@ if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(getPrelim, param_sets)
     pool.close()
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     
     
