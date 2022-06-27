@@ -7,13 +7,12 @@ Created on Thu Jun 23 09:33:36 2022
 
 @description: script used to get preliminary data: 
               1. day of intervention
-              2. beta (transmission rate) of wild type
-              3. beta (transmission rate) of vaccine
+              2. beta (transmission rate) of R0
 """
 
 # Import libraries and set seeds ----------------------------------------------
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import statistics
 import multiprocessing as mp
 import networkx as nx
@@ -25,24 +24,21 @@ home = str(Path.home())
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000, 10000]
 overdispersions = [1]
-R0_wts = [2.5]
-R0_vaxs = [1.5]
-morts = [0.7]
+R0s = [1.5, 2, 2.5, 3]
+morts = [0.85]
 param_sets = []
 for i in Ns:
     for j in overdispersions:
-        for k in R0_wts:
-            for l in R0_vaxs:
-                for m in morts:
-                    param_sets.append([i, j, k, l , m])
+        for k in R0s:
+            for l in morts:
+                param_sets.append([i, j, k, l])
                    
 # Function to find day of intervention and transmission rates for R0s ---------
 def getPrelim(param_set):
     N_cluster = param_set[0]
     k_overdispersion = param_set[1]
-    R0_wt = param_set[2]
-    R0_vax = param_set[3]
-    mort = param_set[4]
+    R0 = param_set[2]
+    mort = param_set[3]
     eit = 0.005
     mean_degree = 15
     p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
@@ -77,7 +73,7 @@ def getPrelim(param_set):
         psiDPrime = get_PGFDPrime(Pk)
         psiPrime = get_PGFPrime(Pk)
         return transmissibility * psiDPrime(1.)/psiPrime(1.)
-    # Find median beta that leads to desired R0_wt (2000 sims) ----------------
+    # Find median beta that leads to desired R0 (2000 sims) ----------------
     p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
     beta_lst = []
     for i in range(2000):
@@ -97,41 +93,14 @@ def getPrelim(param_set):
         G.remove_edges_from(nx.selfloop_edges(G))
         est_R0=3.3
         beta=0.04
-        while est_R0 > R0_wt:
+        while est_R0 > R0:
             beta = beta - 0.0001
             est_R0 = estimate_R0(G, tau=beta, gamma=ave_inf_period_rate) 
         beta_lst.append(beta)
-    plt.hist(beta_lst)
-    print("Median beta value for beta_R0_wt: " + str(statistics.median(beta_lst)))
-    beta_R0_wt = statistics.median(beta_lst)
-    
-    # Find median beta that leads to desired R0_vax (2000 sims) ----------------
-    p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
-    beta_lst = []
-    for i in range(2000):
-        if (i % 100 == 0):
-            print(i)
-        continue_loop = True
-        while (continue_loop):
-            z = []
-            for i in range(N_cluster):
-                deg = 0
-                deg = np.random.negative_binomial(k_overdispersion, p)
-                z.append(deg)
-            if (sum(z) % 2 == 0):
-                continue_loop = False
-        G=nx.configuration_model(z)
-        G=nx.Graph(G)
-        G.remove_edges_from(nx.selfloop_edges(G))
-        est_R0=3.3
-        beta=0.04
-        while est_R0 > R0_vax:
-            beta = beta - 0.0001
-            est_R0 = estimate_R0(G, tau=beta, gamma=ave_inf_period_rate)
-        beta_lst.append(beta)
-    plt.hist(beta_lst)
-    print("Median beta value for beta_R0_vax: " + str(statistics.median(beta_lst)))
-    beta_R0_vax = statistics.median(beta_lst)
+        print(beta)
+    #plt.hist(beta_lst)
+    #print("Median beta value for beta_R0: " + str(statistics.median(beta_lst)))
+    beta_R0 = statistics.median(beta_lst)
     
     # Specify transitions and transmissions -----------------------------------
     H = nx.DiGraph()
@@ -142,15 +111,15 @@ def getPrelim(param_set):
     H.add_edge('I', 'D', rate = (mort) * (1 / ave_inf_period_dead))
     return_statuses = ('S', 'E', 'I', 'R', 'D', 'V')
     J = nx.DiGraph()
-    J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt, weight_label='transmission_weight')
-    J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax, weight_label='transmission_weight')
+    J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0, weight_label='transmission_weight')
+    J.add_edge(('V', 'S'), ('V', 'V'), rate = 0, weight_label='transmission_weight')
     
     # Find day on average when expected_It_N of active infections (2000 sims) -
     nsim = 2000
     I_series = []
     while (len(I_series) < nsim):
-        if (len(I_series) % 200 == 0):
-            print(len(I_series))
+        #if (len(I_series) % 200 == 0):
+            #print(len(I_series))
         continue_loop = True
         while (continue_loop):
             z = []
@@ -190,18 +159,16 @@ def getPrelim(param_set):
                 focal_dist.append(I_series[I_series_dex][day_dex] / N_cluster)
         if len(focal_dist) <= 200:
             raise NameError("Not enough simulations (<10%) to get average number of infections on this day.")
-        print(len(focal_dist))
-        print(statistics.mean(focal_dist))
+        #print(len(focal_dist))
+        #print(statistics.mean(focal_dist))
         if statistics.mean(focal_dist) >= eit:
             interrupt_t = day_dex
             break
         
     # Write output ------------------------------------------------------------    
-    filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '.csv'
+    filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0" + str(R0) + "_mort" + str(mort) + "_eit" + str(eit) + '.csv'
     with open(filename, 'w') as out_f:
-        out_f.write(str(beta_R0_wt))
-        out_f.write(",")
-        out_f.write(str(beta_R0_vax))
+        out_f.write(str(beta_R0))
         out_f.write(",")
         out_f.write(str(interrupt_t))
     
@@ -209,6 +176,7 @@ if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(getPrelim, param_sets)
     pool.close()
+    pool.join()
     
     
     

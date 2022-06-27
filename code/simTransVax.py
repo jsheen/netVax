@@ -14,6 +14,7 @@ Created on Tue Jun  7 19:30:09 2022
 
 # Import libraries and set seeds ----------------------------------------------
 import numpy as np
+np.random.seed(0)
 import networkx as nx
 from collections import defaultdict
 import EoN
@@ -26,15 +27,16 @@ home = str(Path.home())
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000, 10000]
 overdispersions = [1]
-R0_wts = [2]
-R0_vaxs = [1.5]
+R0_wts = [3]
+vaxs = ['R0=0_treat=0.5', 'R0=1.5_treat=0.5', 'R0=2_treat=0.5',
+        'R0=0_treat=0.2', 'R0=1.5_treat=0.2', 'R0=2_treat=0.2']
 morts = [0.85]
 sim_num = 3000
 param_sets = []
 for i in Ns:
     for j in overdispersions:
         for k in R0_wts:
-            for l in R0_vaxs:
+            for l in vaxs:
                 for m in morts:
                     for n in range(sim_num):
                         param_sets.append([i, j, k, l , m, n])
@@ -45,7 +47,7 @@ def runSim(param_set):
     N_cluster = param_set[0]
     k_overdispersion = param_set[1]
     R0_wt = param_set[2]
-    R0_vax = param_set[3]
+    vax = param_set[3]
     mort = param_set[4]
     sim_num = param_set[5]
     eit = 0.005
@@ -60,11 +62,21 @@ def runSim(param_set):
     ave_inf_period_dead = 4
     
     # Get pre-set beta values and time of intervention value ------------------
-    filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '.csv'
-    prelim_data = pd.read_csv(filename, header=None)
-    beta_R0_wt = prelim_data[0][0]
-    beta_R0_vax = prelim_data[1][0]
-    interrupt_t = prelim_data[2][0]
+    # Wild-type
+    filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0" + str(R0_wt) + "_mort" + str(mort) + "_eit" + str(eit) + '.csv'
+    prelim_data_wt = pd.read_csv(filename, header=None)
+    beta_R0_wt = prelim_data_wt[0][0]
+    interrupt_t = prelim_data_wt[1][0]
+    # Vax
+    R0_vax = float(vax.split('_')[0].replace('R0=', ''))
+    R0_vax = ('%f' % R0_vax).rstrip('0').rstrip('.')
+    if float(R0_vax) > 0:
+        filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '.csv'
+        prelim_data_vax = pd.read_csv(filename, header=None)
+        beta_R0_vax = prelim_data_vax[0][0]
+    else:
+        beta_R0_vax = 0
+    vax_treat = float(vax.split('_')[1].replace('treat=', ''))
     
     # Specify transitions and transmissions -----------------------------------
     H = nx.DiGraph()
@@ -104,27 +116,21 @@ def runSim(param_set):
     t_first_half = full_first_half.t()
     I_first_half = full_first_half.I()
     if I_first_half[-1] >= threshold:
-        nodes_first_half_final = full_first_half.get_statuses(list(G.nodes()), t_first_half[-1])
-        curr_IC = defaultdict(lambda: 'S')
-        to_treat = True
-        assign_treat = []
-        assign_control = []
-        for node in G.nodes():
-             status = nodes_first_half_final[node]
-             # Assign half of susceptible individuals to treatment, the other half to control
-             if (status == 'S'):
-                 if (to_treat):
-                     curr_IC[node] = 'V'
-                     to_treat = False
-                     assign_treat.append(node)
-                 else:
-                     curr_IC[node] = status
-                     to_treat = True
-                     assign_control.append(node)
-             else:
-                 curr_IC[node] = status
-        if abs(len(assign_treat) - len(assign_control)) > 1:
+        curr_IC = full_first_half.get_statuses(list(G.nodes()), t_first_half[-1])
+        suscep_nodes = [k for k,v in curr_IC.items() if v == 'S']
+        assign_treat = list(np.random.choice(suscep_nodes, size=int(np.ceil(vax_treat * len(suscep_nodes))), replace=False))
+        curr_IC.update(curr_IC.fromkeys(assign_treat, 'V'))
+        assign_control = list(set(suscep_nodes).difference(set(assign_treat)))
+        if len(assign_treat) + len(assign_control) != len(suscep_nodes):
             raise NameError("Unequal treatment and control groups.")
+        if set(assign_treat).union(set(assign_control)) != set(suscep_nodes):
+            raise NameError("Unequal sets of treatment and control groups.")
+        test_vax_cnt = 0
+        for k,v in curr_IC.items():
+            if v == 'V':
+                test_vax_cnt += 1
+        if test_vax_cnt != len(assign_treat):
+            raise NameError("Error in treatment assignment.")
         full_second_half = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
         t_no_inf = full_second_half.t()[np.where((full_second_half.I() == 0) & (full_second_half.summary()[1]['E'] == 0))[0][0]]
         surv_inf = dict.fromkeys(G.nodes(), t_no_inf)
@@ -137,8 +143,8 @@ def runSim(param_set):
                 surv_dead[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
                 if node_hist[1][0] == 'D':
                     surv_inf[node] = -1
-        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
-            out_f.write('node,assignment,time2inf,time2death\n')
+        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
+            out_f.write('node, assignment, time2inf, time2death\n')
             for node in G.nodes():
                 out_f.write(str(node))
                 out_f.write(',')
@@ -158,5 +164,6 @@ if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(runSim, param_sets)
     pool.close()
+    pool.join()
             
             
