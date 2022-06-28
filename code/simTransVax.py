@@ -26,13 +26,13 @@ from pathlib import Path
 home = str(Path.home())
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000]
+Ns = [1000, 10000]
 overdispersions = [1]
 R0_wts = [3]
-vaxs = ['R0=0_treat=0.5_eff', 'R0=1.5_treat=0.5_eff', 'R0=2_treat=0.5_eff',
-        'R0=0_treat=0.2_eff', 'R0=1.5_treat=0.2_eff', 'R0=2_treat=0.2_eff']
+vaxs = ['R0=0_treat=0.5_eff', 'R0=1.5_treat=0.5_eff',
+        'R0=0_treat=0.2_eff', 'R0=1.5_treat=0.2_eff']
 morts = [0.85]
-vax_effs = [0.6]
+vax_effs = [0.6, 0.8]
 sim_num = 3000
 param_sets = []
 for i in Ns:
@@ -171,7 +171,7 @@ def runSim(param_set):
           "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) +
           '_vaxEff' + str(vax_eff) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
             out_f.write('node, assignment, time2inf, time2death\n')
-            out_f.write('na')
+            out_f.write('na\n')
     
 if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
