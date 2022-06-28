@@ -9,7 +9,8 @@ Created on Tue Jun  7 19:30:09 2022
               individual nodes are assigned to transmissible vaccine treatment 
               and the other half are assigned to control
               
-@assumptions: we assume that vaccine is protective for entire observation period
+@assumptions: (1) vaccine is protective for entire observation period.
+              (2) asymptomatic incubation stage
 """
 
 # Import libraries and set seeds ----------------------------------------------
@@ -25,12 +26,13 @@ from pathlib import Path
 home = str(Path.home())
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000, 10000]
+Ns = [1000]
 overdispersions = [1]
 R0_wts = [3]
-vaxs = ['R0=0_treat=0.5', 'R0=1.5_treat=0.5', 'R0=2_treat=0.5',
-        'R0=0_treat=0.2', 'R0=1.5_treat=0.2', 'R0=2_treat=0.2']
+vaxs = ['R0=0_treat=0.5_eff', 'R0=1.5_treat=0.5_eff', 'R0=2_treat=0.5_eff',
+        'R0=0_treat=0.2_eff', 'R0=1.5_treat=0.2_eff', 'R0=2_treat=0.2_eff']
 morts = [0.85]
+vax_effs = [0.6]
 sim_num = 3000
 param_sets = []
 for i in Ns:
@@ -38,8 +40,9 @@ for i in Ns:
         for k in R0_wts:
             for l in vaxs:
                 for m in morts:
-                    for n in range(sim_num):
-                        param_sets.append([i, j, k, l , m, n])
+                    for n in vax_effs:
+                        for o in range(sim_num):
+                            param_sets.append([i, j, k, l , m, n, o])
 
 
 # For each parameter set, create 3,000 simulations ----------------------------
@@ -49,7 +52,8 @@ def runSim(param_set):
     R0_wt = param_set[2]
     vax = param_set[3]
     mort = param_set[4]
-    sim_num = param_set[5]
+    vax_eff = param_set[5]
+    sim_num = param_set[6]
     eit = 0.005
     mean_degree = 15
     p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
@@ -88,6 +92,7 @@ def runSim(param_set):
     return_statuses = ('S', 'E', 'I', 'R', 'D', 'V')
     J = nx.DiGraph()
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt, weight_label='transmission_weight')
+    J.add_edge(('I', 'V'), ('I', 'E'), rate = (1 - vax_eff) * beta_R0_wt, weight_label='transmission_weight')
     J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax, weight_label='transmission_weight')
     
     # Set threshold value of number of infections at time t -------------------
@@ -143,7 +148,9 @@ def runSim(param_set):
                 surv_dead[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
                 if node_hist[1][0] == 'D':
                     surv_inf[node] = -1
-        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
+        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + 
+                  "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) +
+                  '_vaxEff' + str(vax_eff) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
             out_f.write('node, assignment, time2inf, time2death\n')
             for node in G.nodes():
                 out_f.write(str(node))
@@ -159,7 +166,13 @@ def runSim(param_set):
                 out_f.write(',')
                 out_f.write(str(surv_dead.get(node)))
                 out_f.write('\n')
-            
+    else:
+        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + 
+          "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) +
+          '_vaxEff' + str(vax_eff) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
+            out_f.write('node, assignment, time2inf, time2death\n')
+            out_f.write('na')
+    
 if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(runSim, param_sets)

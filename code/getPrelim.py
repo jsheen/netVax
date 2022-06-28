@@ -112,6 +112,8 @@ def getPrelim(param_set):
     return_statuses = ('S', 'E', 'I', 'R', 'D', 'V')
     J = nx.DiGraph()
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0, weight_label='transmission_weight')
+    # There are no vaccinated nodes in this simulation so the following two transmissions are irrelevant
+    J.add_edge(('I', 'V'), ('I', 'E'), rate = 0, weight_label='transmission_weight')
     J.add_edge(('V', 'S'), ('V', 'V'), rate = 0, weight_label='transmission_weight')
     
     # Find day on average when expected_It_N of active infections (2000 sims) -
