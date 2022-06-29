@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun  7 19:30:09 2022
+Created on Wed Jun 29 16:17:07 2022
 
 @author: jsheen
 
-@description: script used to create village simulations, where roughly half of
-              individual nodes are assigned to transmissible vaccine treatment 
-              and the other half are assigned to control
-              
-@assumptions: (1) vaccine is protective for entire observation period.
-              (2) asymptomatic incubation stage
+@description: example plots
 """
 
 # Import libraries and set seeds ----------------------------------------------
@@ -21,19 +16,18 @@ from collections import defaultdict
 import EoN
 import math
 import pandas as pd
-import multiprocessing as mp
+import matplotlib.pyplot as plt
 from pathlib import Path
 home = str(Path.home())
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000, 10000]
+Ns = [1000]
 overdispersions = [1]
 R0_wts = [3]
-vaxs = ['R0=0_treat=0.5', 'R0=1.5_treat=0.5',
-        'R0=0_treat=0.2', 'R0=1.5_treat=0.2']
+vaxs = ['R0=0_treat=0.5']
 morts = [0.85]
 vax_effs = [0.6]
-sim_num = 3000
+sim_num = 100
 param_sets = []
 for i in Ns:
     for j in overdispersions:
@@ -46,6 +40,8 @@ for i in Ns:
 
 
 # For each parameter set, create 3,000 simulations ----------------------------
+store_t = []
+store_I = []
 def runSim(param_set):
     N_cluster = param_set[0]
     k_overdispersion = param_set[1]
@@ -53,7 +49,6 @@ def runSim(param_set):
     vax = param_set[3]
     mort = param_set[4]
     vax_eff = param_set[5]
-    sim_num = param_set[6]
     eit = 0.005
     mean_degree = 15
     p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
@@ -137,46 +132,25 @@ def runSim(param_set):
         if test_vax_cnt != len(assign_treat):
             raise NameError("Error in treatment assignment.")
         full_second_half = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
-        t_no_inf = full_second_half.t()[np.where((full_second_half.I() == 0) & (full_second_half.summary()[1]['E'] == 0))[0][0]]
-        surv_inf = dict.fromkeys(G.nodes(), t_no_inf)
-        surv_dead = dict.fromkeys(G.nodes(), t_no_inf)
+        store_t.append(full_second_half.t())
+        store_I.append(full_second_half.I())
+        tot_con_inf = 0
+        tot_trt_inf = 0
         for node in G.nodes():
-            node_hist = full_second_half.node_history(node)
-            if 'I' in node_hist[1]:
-                surv_inf[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'I')[0][0]]
-            if 'D' in node_hist[1]:
-                surv_dead[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
-                if node_hist[1][0] == 'D':
-                    surv_inf[node] = -1
-        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + 
-                  "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) +
-                  '_vaxEff' + str(vax_eff) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
-            out_f.write('node, assignment, time2inf, time2death\n')
-            for node in G.nodes():
-                out_f.write(str(node))
-                out_f.write(',')
-                if node in assign_treat and node not in assign_control:
-                    out_f.write('t')
-                elif node not in assign_treat and node in assign_control:
-                    out_f.write('c')
-                elif node not in assign_treat and node not in assign_control:
-                    out_f.write('na')
-                out_f.write(',')
-                out_f.write(str(surv_inf.get(node)))
-                out_f.write(',')
-                out_f.write(str(surv_dead.get(node)))
-                out_f.write('\n')
-    else:
-        with open(home + '/netVax/code_output/sim_results/N' + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0wt" + str(R0_wt) + 
-          "_R0vax" + str(R0_vax) + "_mort" + str(mort) + "_eit" + str(eit) + '_vaxTreat' + str(vax_treat) +
-          '_vaxEff' + str(vax_eff) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
-            out_f.write('node, assignment, time2inf, time2death\n')
-            out_f.write('na\n')
-    
-if __name__ == '__main__':
-    pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
-    pool.map(runSim, param_sets)
-    pool.close()
-    pool.join()
-            
+            if 'I' in full_second_half.node_history(node)[1]:
+                if node in assign_treat:
+                    tot_trt_inf += 1
+                elif node in assign_control:
+                    tot_con_inf += 1
+        if tot_con_inf <= tot_trt_inf:
+            print('More infections in treatment than control.')
+            print(str(tot_con_inf - tot_trt_inf))
+            plt.plot(full_second_half.t(), full_second_half.I())
+        
+for param_set in param_sets:
+    runSim(param_set)
+
+#plt.plot(store_t[0], store_I[0])
+#for sim_dex in range(1, len(store_t)):
+#    plt.plot(store_t[sim_dex], store_I[sim_dex])
             
