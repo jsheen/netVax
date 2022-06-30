@@ -23,7 +23,7 @@ home = str(Path.home())
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 overdispersions = [1]
-R0_wts = [3]
+R0_wts = [2.5]
 vaxs = ['R0=0_treat=0.5']
 morts = [0.85]
 vax_effs = [0.6]
@@ -118,12 +118,13 @@ def runSim(param_set):
     if I_first_half[-1] >= threshold:
         curr_IC = full_first_half.get_statuses(list(G.nodes()), t_first_half[-1])
         suscep_nodes = [k for k,v in curr_IC.items() if v == 'S']
-        assign_treat = list(np.random.choice(suscep_nodes, size=int(np.ceil(vax_treat * len(suscep_nodes))), replace=False))
+        suscep_nodes_half = np.random.choice(suscep_nodes, size=int(np.ceil(0.5 * len(suscep_nodes))), replace=False)
+        assign_treat = list(np.random.choice(suscep_nodes_half, size=int(np.ceil(vax_treat * len(suscep_nodes_half))), replace=False))
         curr_IC.update(curr_IC.fromkeys(assign_treat, 'V'))
-        assign_control = list(set(suscep_nodes).difference(set(assign_treat)))
-        if len(assign_treat) + len(assign_control) != len(suscep_nodes):
+        assign_control = list(set(suscep_nodes_half).difference(set(assign_treat)))
+        if len(assign_treat) + len(assign_control) != len(suscep_nodes_half):
             raise NameError("Unequal treatment and control groups.")
-        if set(assign_treat).union(set(assign_control)) != set(suscep_nodes):
+        if set(assign_treat).union(set(assign_control)) != set(suscep_nodes_half):
             raise NameError("Unequal sets of treatment and control groups.")
         test_vax_cnt = 0
         for k,v in curr_IC.items():
@@ -134,6 +135,7 @@ def runSim(param_set):
         full_second_half = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
         store_t.append(full_second_half.t())
         store_I.append(full_second_half.I())
+        """
         tot_con_inf = 0
         tot_trt_inf = 0
         for node in G.nodes():
@@ -143,14 +145,15 @@ def runSim(param_set):
                 elif node in assign_control:
                     tot_con_inf += 1
         if tot_con_inf <= tot_trt_inf:
-            print('More infections in treatment than control.')
+            print('More or equal infections in treatment than control.')
             print(str(tot_con_inf - tot_trt_inf))
             plt.plot(full_second_half.t(), full_second_half.I())
+        """
         
 for param_set in param_sets:
     runSim(param_set)
 
-#plt.plot(store_t[0], store_I[0])
-#for sim_dex in range(1, len(store_t)):
-#    plt.plot(store_t[sim_dex], store_I[sim_dex])
+plt.plot(store_t[0], store_I[0])
+for sim_dex in range(1, len(store_t)):
+    plt.plot(store_t[sim_dex], store_I[sim_dex])
             

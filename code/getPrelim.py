@@ -22,9 +22,9 @@ from pathlib import Path
 home = str(Path.home())
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000, 10000]
+Ns = [1000]
 overdispersions = [1]
-R0s = [1.5, 2, 2.5, 3]
+R0s = [0.5, 0.9, 1]
 morts = [0.85]
 param_sets = []
 for i in Ns:
@@ -77,8 +77,8 @@ def getPrelim(param_set):
     p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
     beta_lst = []
     for i in range(2000):
-        if (i % 100 == 0):
-            print(i)
+        #if (i % 100 == 0):
+            #print(i)
         continue_loop = True
         while (continue_loop):
             z = []
@@ -97,7 +97,7 @@ def getPrelim(param_set):
             beta = beta - 0.0001
             est_R0 = estimate_R0(G, tau=beta, gamma=ave_inf_period_rate) 
         beta_lst.append(beta)
-        print(beta)
+        #print(beta)
     #plt.hist(beta_lst)
     #print("Median beta value for beta_R0: " + str(statistics.median(beta_lst)))
     beta_R0 = statistics.median(beta_lst)
@@ -160,12 +160,15 @@ def getPrelim(param_set):
             if len(I_series[I_series_dex]) > day_dex:
                 focal_dist.append(I_series[I_series_dex][day_dex] / N_cluster)
         if len(focal_dist) <= 200:
-            raise NameError("Not enough simulations (<10%) to get average number of infections on this day.")
-        #print(len(focal_dist))
-        #print(statistics.mean(focal_dist))
-        if statistics.mean(focal_dist) >= eit:
-            interrupt_t = day_dex
+            print("Not enough simulations (<10%) to get average number of infections on this day.")
+            interrupt_t = 'na'
             break
+        else:
+            #print(len(focal_dist))
+            #print(statistics.mean(focal_dist))
+            if statistics.mean(focal_dist) >= eit:
+                interrupt_t = day_dex
+                break
         
     # Write output ------------------------------------------------------------    
     filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k_overdispersion) + "_R0" + str(R0) + "_mort" + str(mort) + "_eit" + str(eit) + '.csv'

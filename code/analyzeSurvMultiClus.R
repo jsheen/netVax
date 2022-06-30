@@ -18,8 +18,9 @@ right_censor <- 120
 N_clusters <- c(1000)
 overdispersions <- c(1)
 R0_wts <- c(3)
- vaxs <- c('R0=0_treat=0.5', 'R0=1.5_treat=0.5',
-           'R0=0_treat=0.2', 'R0=1.5_treat=0.2')
+ vaxs <- c('R0=0_treat=0.5', 'R0=0_treat=0.1',
+           'R0=1.1_treat=0.5', 'R0=1.1_treat=0.1',
+           'R0=1.2_treat=0.5', 'R0=1.2_treat=0.1')
 morts <- c(0.85)
 vaxEffs <- c(0.6)
 multi_clusters <- c(1, 2, 10)
@@ -65,25 +66,42 @@ for (param_set in param_sets) {
       single_clus <- read.csv(filename)
       single_clus$clusNum <- 1
       if (single_clus$node[1] != 'na') {
-        # Take care of censoring and status (Infection)
+        single_clus <- single_clus[-which(single_clus$assignment == 'na'),]
+        # (Infection) Take care of censoring and status
+        # Get end of simulation time for infections
         end_sim_time_inf <- max(single_clus$time2inf)
-        single_clus$status_inf <- ifelse(single_clus$time2inf == end_sim_time_inf, 1, 2) # If equal to end_sim_time, then was never infected, else was infected so status = 2
-        for (row_dex in 1:nrow(single_clus)) {
-          if (single_clus$time2inf[row_dex] > right_censor) { # If any infection time, or end of simulation time is greater than right censor, replace
-            # infection time, or end of simulation time with right censor, and put a 1
-            single_clus$time2inf[row_dex] <- right_censor
-            single_clus$status_inf[row_dex] <- 1
-          }
+        # If equal to end_sim_time, then was never infected (status == 1), else was infected (status == 2)
+        single_clus$status_inf <- ifelse(single_clus$time2inf == end_sim_time_inf, 1, 2)
+        # For all that were never infected (status == 1), change to right censor. These nodes have end of simulation
+        # time as their time2hazard. If end of sim time is less than right censor, should be replaced because we censor
+        # them at right censor. If end of sim time is greater than right censor, should be replaced because we also 
+        # stop observation at right censor. If equal, nothing will happen with the following code block. Those with
+        # status 2, i.e. infected at some point of the simulation, will not be touched.
+        single_clus$time2inf <- ifelse(single_clus$status_inf == 1, right_censor, single_clus$time2inf)
+        # If end_sim_time_inf > right_censor, then possible that some that were infected should be censored as they
+        # have infection times greater than right censor. If end_sim_time_inf <= right_censor, then none of the
+        # time2infs need to change.
+        if (end_sim_time_inf > right_censor) {
+          single_clus$time2inf <- ifelse(single_clus$status_inf == 2 & single_clus$time2inf > right_censor,
+                                         right_censor, single_clus$time2inf)
         }
-        # Take care of censoring and status (Death)
+        # (Death) Take care of censoring and status
+        # Get end of simulation time for deaths
         end_sim_time_death <- max(single_clus$time2death)
-        single_clus$status_death <- ifelse(single_clus$time2death == end_sim_time_death, 1, 2) # If equal to end_sim_time, then was never infected, else was infected so status = 2
-        for (row_dex in 1:nrow(single_clus)) {
-          if (single_clus$time2death[row_dex] > right_censor) { # If any infection time, or end of simulation time is greater than right censor, replace
-            # infection time, or end of simulation time with right censor, and put a 1
-            single_clus$time2death[row_dex] <- right_censor
-            single_clus$status_death[row_dex] <- 1
-          }
+        # If equal to end_sim_time, then was never infected (status == 1), else was infected (status == 2)
+        single_clus$status_death <- ifelse(single_clus$time2death == end_sim_time_death, 1, 2)
+        # For all that were never infected (status == 1), change to right censor. These nodes have end of simulation
+        # time as their time2hazard. If end of sim time is less than right censor, should be replaced because we censor
+        # them at right censor. If end of sim time is greater than right censor, should be replaced because we also 
+        # stop observation at right censor. If equal, nothing will happen with the following code block. Those with
+        # status 2, i.e. infected at some point of the simulation, will not be touched.
+        single_clus$time2death <- ifelse(single_clus$status_death == 1, right_censor, single_clus$time2death)
+        # If end_sim_time_death > right_censor, then possible that some that were infected should be censored as they
+        # have infection times greater than right censor. If end_sim_time_death <= right_censor, then none of the
+        # time2deathss need to change.
+        if (end_sim_time_death > right_censor) {
+          single_clus$time2death <- ifelse(single_clus$status_death == 2 & single_clus$time2death > right_censor,
+                                           right_censor, single_clus$time2death)
         }
       }
       sim_res <- single_clus
@@ -104,32 +122,28 @@ for (param_set in param_sets) {
           }
         }
         single_clus$clusNum <- cluster_dex
-        # Take care of censoring and status (Infection)
+        single_clus <- single_clus[-which(single_clus$assignment == 'na'),]
+        # (Infection) Take care of censoring and status
         end_sim_time_inf <- max(single_clus$time2inf)
-        single_clus$status_inf <- ifelse(single_clus$time2inf == end_sim_time_inf, 1, 2) # If equal to end_sim_time, then was never infected, else was infected so status = 2
-        for (row_dex in 1:nrow(single_clus)) {
-          if (single_clus$time2inf[row_dex] > right_censor) { # If any infection time, or end of simulation time is greater than right censor, replace
-                                                              # infection time, or end of simulation time with right censor, and put a 1
-            single_clus$time2inf[row_dex] <- right_censor
-            single_clus$status_inf[row_dex] <- 1
-          }
+        single_clus$status_inf <- ifelse(single_clus$time2inf == end_sim_time_inf, 1, 2)
+        single_clus$time2inf <- ifelse(single_clus$status_inf == 1, right_censor, single_clus$time2inf)
+        if (end_sim_time_inf > right_censor) {
+          single_clus$time2inf <- ifelse(single_clus$status_inf == 2 & single_clus$time2inf > right_censor,
+                                         right_censor, single_clus$time2inf)
         }
-        # Take care of censoring and status (Death)
+        # (Death) Take care of censoring and status
         end_sim_time_death <- max(single_clus$time2death)
-        single_clus$status_death <- ifelse(single_clus$time2death == end_sim_time_death, 1, 2) # If equal to end_sim_time, then was never infected, else was infected so status = 2
-        for (row_dex in 1:nrow(single_clus)) {
-          if (single_clus$time2death[row_dex] > right_censor) { # If any infection time, or end of simulation time is greater than right censor, replace
-            # infection time, or end of simulation time with right censor, and put a 1
-            single_clus$time2death[row_dex] <- right_censor
-            single_clus$status_death[row_dex] <- 1
-          }
+        single_clus$status_death <- ifelse(single_clus$time2death == end_sim_time_death, 1, 2)
+        single_clus$time2death <- ifelse(single_clus$status_death == 1, right_censor, single_clus$time2death)
+        if (end_sim_time_death > right_censor) {
+          single_clus$time2death <- ifelse(single_clus$status_death == 2 & single_clus$time2death > right_censor,
+                                         right_censor, single_clus$time2death)
         }
         sim_res_ls[[cluster_dex]] <- single_clus
       }
       sim_res <- do.call(rbind, sim_res_ls)
     }
     if (sim_res$node[1] != 'na') {
-      sim_res <- sim_res[-which(sim_res$assignment == 'na'),]
       sim_res_infect <- sim_res
       sim_res_death <- sim_res
       # Infection
@@ -222,18 +236,24 @@ l2_dex <- 1
 for (row_dex in 1:nrow(res_df)) {
   # Infection
   hist_df <- data.frame(as.numeric(strsplit(res_df$effect_estimates_inf[row_dex], '_')[[1]]))
-  colnames(hist_df) <- 'effect_estimate'
-  l[[l_dex]] <- ggplot(hist_df, aes(x=effect_estimate)) + ggtitle(paste0('Inf: R0_vax=', res_df$R0_vax[row_dex], '; vax_treat=', res_df$vaxTreat[row_dex],
-                                                                         '; Power=', round(res_df$power_inf[row_dex], digits=2), 
-                                                                         '; Clus=', res_df$multi_cluster[row_dex])) + 
+  colnames(hist_df) <- c('effect_estimate')
+  quant <- as.numeric(quantile(hist_df$effect_estimate, c(0.025, 0.975)))
+  hist_df <- data.frame(hist_df[which(hist_df$effect_estimate > quant[1] & hist_df$effect_estimate < quant[2]),])
+  colnames(hist_df) <- c('effect_estimate')
+  l[[l_dex]] <- ggplot(hist_df, aes(x=effect_estimate)) + 
+    ggtitle(paste0('Inf: R0_vax=', res_df$R0_vax[row_dex], '; vax_treat=', res_df$vaxTreat[row_dex],
+                   '; Power=', round(res_df$power_inf[row_dex], digits=2), '; Clus=', res_df$multi_cluster[row_dex])) + 
     geom_histogram(bins=30) + geom_vline(xintercept=0.6, col='red') + theme(plot.title = element_text(size = 5))
   l_dex <- l_dex + 1
   # Death
   hist_df <- data.frame(as.numeric(strsplit(res_df$effect_estimates_death[row_dex], '_')[[1]]))
-  colnames(hist_df) <- 'effect_estimate'
-  l2[[l2_dex]] <- ggplot(hist_df, aes(x=effect_estimate)) + ggtitle(paste0('Death: R0_vax=', res_df$R0_vax[row_dex], '; vax_treat=', res_df$vaxTreat[row_dex],
-                                                                           '; Power=', round(res_df$power_death[row_dex], digits=2),
-                                                                           '; Clus=', res_df$multi_cluster[row_dex])) + 
+  colnames(hist_df) <- c('effect_estimate')
+  quant <- as.numeric(quantile(hist_df$effect_estimate, c(0.025, 0.975)))
+  hist_df <- data.frame(hist_df[which(hist_df$effect_estimate > quant[1] & hist_df$effect_estimate < quant[2]),])
+  colnames(hist_df) <- c('effect_estimate')
+  l2[[l2_dex]] <- ggplot(hist_df, aes(x=effect_estimate)) + 
+    ggtitle(paste0('Death: R0_vax=', res_df$R0_vax[row_dex], '; vax_treat=', res_df$vaxTreat[row_dex], 
+                   '; Power=', round(res_df$power_death[row_dex], digits=2),'; Clus=', res_df$multi_cluster[row_dex])) + 
     geom_histogram(bins=30) + geom_vline(xintercept=0.6, col='red') + theme(plot.title = element_text(size = 5))
   l2_dex <- l2_dex + 1
 }
