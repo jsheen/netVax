@@ -69,7 +69,9 @@ for (param_set in param_sets) {
                            '_R0wt', R0_wt, '_R0vax', R0_vax, '_mort', mort, '_eit', eit,
                            '_vaxEff', vax_eff, '_sim', to_join, '.csv')
         single_clus <- read.csv(filename)
-        if (single_clus$node[1] != 'na' & !(to_join %in% used)) {
+        if (single_clus$node[1] != 'na' & !(to_join %in% used) &
+            length(unique(single_clus$time2inf_trt[which(single_clus$assignment != 'na')])) > 1 & # With at least one infection, power is much better, but power is even better when guaranteeing at least 2 infections
+            length(unique(single_clus$time2inf_con[which(single_clus$assignment != 'na')])) > 1) {
           is_empty_df <- FALSE
           used <- c(used, to_join)
         }
@@ -84,7 +86,6 @@ for (param_set in param_sets) {
         single_clus$time2inf <- single_clus$time2inf_con
         single_clus$time2death <- single_clus$time2death_con
       }
-      
       # (Infection) Take care of censoring and status
       end_sim_time_inf <- max(single_clus$time2inf)
       single_clus$status_inf <- ifelse(single_clus$time2inf == end_sim_time_inf, 1, 2)
@@ -106,6 +107,16 @@ for (param_set in param_sets) {
     sim_res <- do.call(rbind, sim_res_ls)
     sim_res_infect <- sim_res
     sim_res_death <- sim_res
+    
+    # temp <- unique(sim_res_infect$clusNum)
+    # for (uniq_clusNum in temp) {
+    #   if (length(unique(sim_res_infect$time2inf[which(sim_res_infect$clusNum == uniq_clusNum)])) <= 2) {
+    #     print(uniq_clusNum)
+    #   }
+    # }
+    # save <- sim_res_infect
+    # sim_res_infect <- sim_res_infect[which(sim_res_infect$clusNum != 4),]
+    
     # Infection
     sim_res_infect$time2death <- NULL
     sim_res_infect$status_death <- NULL
@@ -213,9 +224,9 @@ for (row_dex in 1:nrow(res_df)) {
     geom_histogram(bins=30) + geom_vline(xintercept=0.6, col='red') + theme(plot.title = element_text(size = 5))
   l2_dex <- l2_dex + 1
 }
-ggsave(filename="~/netVax/code_output/plots/N=1000_inf_multi_CRT.pdf", marrangeGrob(grobs = l, nrow=1, ncol=4),
+ggsave(filename="~/netVax/code_output/plots/N=1000_inf_multi_CRT_guaranteeInfEnroll.pdf", marrangeGrob(grobs = l, nrow=1, ncol=4),
        width=10, height=3, units='in', dpi=600)
-ggsave(filename="~/netVax/code_output/plots/N=1000_death_multi_CRT.pdf", marrangeGrob(grobs = l2, nrow=1, ncol=4),
+ggsave(filename="~/netVax/code_output/plots/N=1000_death_multi_CRT_guaranteeInfEnroll.pdf", marrangeGrob(grobs = l2, nrow=1, ncol=4),
        width=10, height=3, units='in', dpi=600)
 
 

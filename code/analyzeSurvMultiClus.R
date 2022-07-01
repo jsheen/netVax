@@ -19,11 +19,10 @@ N_clusters <- c(1000)
 overdispersions <- c(1)
 R0_wts <- c(3)
  vaxs <- c('R0=0_treat=0.5', 'R0=0_treat=0.1',
-           'R0=1.1_treat=0.5', 'R0=1.1_treat=0.1',
-           'R0=1.2_treat=0.5', 'R0=1.2_treat=0.1')
+           'R0=1.1_treat=0.5', 'R0=1.1_treat=0.1')
 morts <- c(0.85)
 vaxEffs <- c(0.6)
-multi_clusters <- c(1, 2, 10)
+multi_clusters <- c(2, 4, 10, 20)
 param_sets <- list()
 param_sets_dex <- 1
 for (i in N_clusters) {
@@ -257,9 +256,9 @@ for (row_dex in 1:nrow(res_df)) {
     geom_histogram(bins=30) + geom_vline(xintercept=0.6, col='red') + theme(plot.title = element_text(size = 5))
   l2_dex <- l2_dex + 1
 }
-ggsave(filename="~/netVax/code_output/plots/N=1000_inf_multi.pdf", marrangeGrob(grobs = l, nrow=1, ncol=3),
-       width=9, height=3, units='in', dpi=600)
-ggsave(filename="~/netVax/code_output/plots/N=1000_death_multi.pdf", marrangeGrob(grobs = l2, nrow=1, ncol=3),
-       width=9, height=3, units='in', dpi=600)
+ggsave(filename="~/netVax/code_output/plots/N=1000_inf_multi.pdf", marrangeGrob(grobs = l, nrow=1, ncol=4),
+       width=10, height=3, units='in', dpi=600)
+ggsave(filename="~/netVax/code_output/plots/N=1000_death_multi.pdf", marrangeGrob(grobs = l2, nrow=1, ncol=4),
+       width=10, height=3, units='in', dpi=600)
 
 
