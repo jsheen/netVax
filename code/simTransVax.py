@@ -29,7 +29,8 @@ home = str(Path.home())
 Ns = [1000]
 overdispersions = [1]
 R0_wts = [3]
-vaxs = ['R0=0_treat=0.5', 'R0=0_treat=0.1']
+vaxs = ['R0=0.5_treat=0.5', 'R0=0.5_treat=0.1',
+        'R0=0.9_treat=0.5', 'R0=0.9_treat=0.1']
 morts = [0.85]
 vax_effs = [0.6]
 sim_num = 3000
