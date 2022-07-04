@@ -24,7 +24,7 @@ home = str(Path.home())
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 overdispersions = [1]
-R0s = [0.5, 0.9, 1]
+R0s = [0.25]
 morts = [0.85]
 param_sets = []
 for i in Ns:

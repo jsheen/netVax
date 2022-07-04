@@ -18,7 +18,7 @@ right_censor <- 120
 N_clusters <- c(1000)
 overdispersions <- c(1)
 R0_wts <- c(3)
- vaxs <- c('R0=0_treat=0.5', 'R0=1.1_treat=0.5', 'R0=1.1_treat=0.1')
+ vaxs <- c('R0=0_treat=0.5', 'R0=0.25_treat=0.5', 'R0=1.1_treat=0.5', 'R0=1.1_treat=0.1')
 morts <- c(0.85)
 vaxEffs <- c(0.6)
 multi_clusters <- c(2, 4, 10, 20)

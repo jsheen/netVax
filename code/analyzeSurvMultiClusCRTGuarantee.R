@@ -19,7 +19,7 @@ right_censor <- 120
 N_clusters <- c(1000)
 overdispersions <- c(1)
 R0_wts <- c(3)
-R0_vaxs <- c(0, 1.1)
+R0_vaxs <- c(0, 0.25, 1.1)
 morts <- c(0.85)
 vaxEffs <- c(0.6)
 multi_clusters <- c(2, 4, 10, 20)
