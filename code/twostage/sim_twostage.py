@@ -42,7 +42,7 @@ for i in Ns:
                                 param_sets.append([i, j, k, l , m, n, o, p])
 
 
-# For each parameter set, create 3,000 simulations ----------------------------
+# For each parameter set, create simulations ----------------------------
 def runSim(param_set):
     N_cluster = param_set[0]
     k_overdispersion = param_set[1]
