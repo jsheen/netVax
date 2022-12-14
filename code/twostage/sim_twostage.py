@@ -181,7 +181,7 @@ def runSim(param_set):
           '_vaxEff' + str(vax_eff) + '_assign' + str(assign) + '_sim' + str(sim_num) + '.csv', 'w') as out_f:
             out_f.write('node, assignment, time2inf_trt, time2death_trt, time2inf_con, time2death_con\n')
             out_f.write('na\n')
-    
+
 if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(runSim, param_sets)
