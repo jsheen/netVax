@@ -96,15 +96,15 @@ for (trial_num in 1:N_trials) {
       low_df$cond <- 0
       high_df$cond <- 1
       to_analyze <- rbind(low_df, high_df)
+      # Perform t-test
+      
+      
+      
+      
       res.logistic <- glm(formula=status ~ factor(cond), family=binomial(link = "logit"), data=to_analyze)
       pval_res <- c(pval_res, summary(res.logistic)[12]$coefficients[8])
       if (summary(res.logistic)[12]$coefficients[8] < 0.05) {
-        # Use predict function
-        test <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-        colnames(test) <- c('cond')
-        rownames(test) <- c('low', 'high')
-        test2 <- predict(res.logistic, test, type='response')
-        est_eff_res <- c(est_eff_res, unname(test2[1] - test2[2]))
+        est_eff_res <- c(est_eff_res, summary(res.logistic)[12]$coefficients[2])
       } else {
         est_eff_res <- c(est_eff_res, NA)
       }
