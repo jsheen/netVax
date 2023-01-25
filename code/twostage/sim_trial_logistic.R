@@ -1,18 +1,17 @@
 # Script used to simulate two-stage trials -------------------------------------
 # Libraries --------------------------------------------------------------------
 library("stats")
-library("lme4")
 
 # Parameters -------------------------------------------------------------------
 set.seed(0)
 N_sims = 1000 # Total number of cluster simulations in simulation bank
 N_sample = 200 # Number sampled from each cluster
-N_trials = 200 # Number of trial simulations to conduct
+N_trials = 500 # Number of trial simulations to conduct
 cutoff = 90
 assignment_mechanisms = c(0, 0.1, 0.25)
-N_assignment_mechanism_sets = 5
+N_assignment_mechanism_sets = 4
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.25
+R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -38,7 +37,9 @@ final_est_eff_ls <- list()
 final_pval_ls <- list()
 final_ls_dex <- 1
 for (trial_num in 1:N_trials) {
-  print(trial_num)
+  if (trial_num %% 200 == 0) {
+    print(trial_num)
+  }
   clusters_to_use <- c()
   for (assignment_mechanism_dex in 1:length(assignment_mechanisms)) {
     clusters_to_use <- c(clusters_to_use, sample(to_use_ls[[assignment_mechanism_dex]], N_assignment_mechanism_sets))
@@ -100,11 +101,11 @@ for (trial_num in 1:N_trials) {
       pval_res <- c(pval_res, summary(res.logistic)[12]$coefficients[8])
       if (summary(res.logistic)[12]$coefficients[8] < 0.05) {
         # Use predict function
-        test <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-        colnames(test) <- c('cond')
-        rownames(test) <- c('low', 'high')
-        test2 <- predict(res.logistic, test, type='response')
-        est_eff_res <- c(est_eff_res, unname(test2[1] - test2[2]))
+        to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
+        colnames(to_predict) <- c('cond')
+        rownames(to_predict) <- c('low', 'high')
+        predicted <- predict(res.logistic, to_predict, type='response')
+        est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
       } else {
         est_eff_res <- c(est_eff_res, NA)
       }

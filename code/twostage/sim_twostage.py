@@ -22,13 +22,13 @@ from pathlib import Path
 home = str(Path.home())
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000]
-overdispersions = [1]
-R0_wts = [3]
-vaxs = [0, 0.25, 1.1]
+Ns = [1000, 10000]
+overdispersions = [0.1, 0.7, 1]
+R0_wts = [1.5, 3, 6]
+vaxs = [0, 0.25, 0.9, 1.1]
 morts = [0.85]
 vax_effs = [0.6]
-assigns = [0, 0.1, 0.25, 0.5, 0.75]
+assigns = [0, 0.1, 0.25]
 sim_num = 1000
 param_sets = []
 for i in Ns:
