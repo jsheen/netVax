@@ -6,12 +6,12 @@ library("stats")
 set.seed(0)
 N_sims = 1000 # Total number of cluster simulations in simulation bank
 N_sample = 200 # Number sampled from each cluster
-N_trials = 500 # Number of trial simulations to conduct
+N_trials = 1000 # Number of trial simulations to conduct
 cutoff = 90
 assignment_mechanisms = c(0, 0.1, 0.25)
-N_assignment_mechanism_sets = 4
+N_assignment_mechanism_sets = 5
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 1.1
+R0_vax = 0.25
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -31,15 +31,8 @@ for (assignment_mechanism in assignment_mechanisms) {
   to_use_ls_dex <- to_use_ls_dex + 1
 }
 
-# Trial simulations ------------------------------------------------------------
-final_ls <- list()
-final_est_eff_ls <- list()
-final_pval_ls <- list()
-final_ls_dex <- 1
-for (trial_num in 1:N_trials) {
-  if (trial_num %% 200 == 0) {
-    print(trial_num)
-  }
+# Function to run trial simulation ---------------------------------------------
+run_trial <- function(trial_num) {
   clusters_to_use <- c()
   for (assignment_mechanism_dex in 1:length(assignment_mechanisms)) {
     clusters_to_use <- c(clusters_to_use, sample(to_use_ls[[assignment_mechanism_dex]], N_assignment_mechanism_sets))
@@ -89,6 +82,7 @@ for (trial_num in 1:N_trials) {
   }
   # First, get information from sampled clusters
   est_eff_res <- c()
+  bs_est_eff_res <- c()
   pval_res <- c()
   for (sampled_dex in 1:(length(sampled_ls) - 1)) {
     low_df <- sampled_ls[[sampled_dex]]
@@ -106,35 +100,66 @@ for (trial_num in 1:N_trials) {
         rownames(to_predict) <- c('low', 'high')
         predicted <- predict(res.logistic, to_predict, type='response')
         est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
+        # Do bootstrap estimate
+        bs_ests <- c()
+        for (iter in 1:1000) {
+          # 1) construct bootstrap sample:
+          bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
+          bs_samp <- to_analyze[bs_indices,]
+          # 2) run logistic and predict
+          res.logistic_bs <- glm(formula=status ~ factor(cond), family=binomial(link = "logit"), data=bs_samp)
+          to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
+          colnames(to_predict) <- c('cond')
+          rownames(to_predict) <- c('low', 'high')
+          predicted_bs <- predict(res.logistic_bs, to_predict, type='response')
+          bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
+        }
+        bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
       } else {
         est_eff_res <- c(est_eff_res, NA)
+        bs_est_eff_res <- c(bs_est_eff_res, NA)
       }
     } else {
       est_eff_res <- c(est_eff_res, NA)
       pval_res <- c(pval_res, NA)
     }
   }
-  final_est_eff_ls[[final_ls_dex]] <- data.frame(matrix(est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1)))
-  final_pval_ls[[final_ls_dex]] <- data.frame(matrix(pval_res, nrow=1, ncol=(length(assignment_mechanisms) - 1)))
-  
-  # Second, get true effect (estimand)
+  # Code to get true ASE effect (temp_df)
   ave_cluster_average <- sum_cluster_average / N_assignment_mechanism_sets
   temp_df <- data.frame(matrix(ave_cluster_average[1:length(ave_cluster_average) - 1] - ave_cluster_average[2:length(ave_cluster_average)], nrow=1, ncol=length(ave_cluster_average) - 1))
-  final_ls[[final_ls_dex]] <- temp_df
-  final_ls_dex <- final_ls_dex + 1
+  # Code to store the true effect (est_eff_res) the bootstraps (bs_est_eff_res) and the p_values (p_val_res) and true ASE effect (temp_df)
+  to_return_ls = list(data.frame(matrix(est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
+                      data.frame(matrix(bs_est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
+                      data.frame(matrix(pval_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
+                      temp_df)
+  return(to_return_ls)
 }
-final_df <- do.call(rbind, final_ls)
-final_est_eff_df <- do.call(rbind, final_est_eff_ls)
-final_pval_df <- do.call(rbind, final_pval_ls)
+
+# Run in parallel --------------------------------------------------------------
+library(foreach)
+library(doParallel)
+library(pracma)
+cores <- detectCores()
+cl <- makeCluster(cores[1]-1)
+registerDoParallel(cl)
+final <- foreach(i=1:N_trials) %dopar% {
+  library(deSolve)
+  library(foreach)
+  library(doParallel)
+  res = run_trial(i)
+  write.csv(res[[1]], paste0("~/netVax/scratch/", i, ".csv")) # for debugging purposes
+  res
+}
+stopCluster(cl)
 
 # Q1) What is the the mean and variance of the estimated effects under this trial design?
 for (col_dex in 1:ncol(final_est_eff_df)) {
   print(paste0('Effect estimate: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
-  print(paste0('Mean: ', mean(final_est_eff_df[,col_dex], na.rm=T)))
-  print(paste0('Variance: ', var(final_est_eff_df[,col_dex], na.rm=T)))
+  print(paste0('Mean: ', mean(final_est_eff_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('Mean of the 95% bootstrap CI: ', mean(bs_final_est_eff_df[,col_dex] * 100, na.rm=T)))
 }
 
-# Q2) What is the power to detect an effect under this trial design using the cox proportional hazards model?
+# Q2) What is the power to detect an effect under this trial design using the logistic model?
 for (col_dex in 1:ncol(final_pval_df)) {
   print(paste0('Power: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
   print(length(which(final_pval_df[,col_dex] < 0.05)) / length(which(!is.na(final_pval_df[,col_dex]))))
@@ -143,7 +168,7 @@ for (col_dex in 1:ncol(final_pval_df)) {
 # Q3) What is the true effect across groups (mean and variance)?
 for (col_dex in 1:ncol(final_df)) {
   print(paste0('True effect: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
-  print(paste0('Mean: ', mean(final_df[,col_dex], na.rm=T)))
-  print(paste0('Variance: ', var(final_df[,col_dex], na.rm=T)))
+  print(paste0('Mean: ', mean(final_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('SD: ', sd(final_df[,col_dex] * 100, na.rm=T)))
 }
 
