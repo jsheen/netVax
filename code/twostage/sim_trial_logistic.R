@@ -9,9 +9,9 @@ N_sample = 200 # Number sampled from each cluster
 N_trials = 1000 # Number of trial simulations to conduct
 cutoff = 90
 assignment_mechanisms = c(0, 0.1, 0.25)
-N_assignment_mechanism_sets = 5
+N_assignment_mechanism_sets = 4
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.25
+R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -151,6 +151,9 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
+save(final, file = "~/netVax/code_output/twostage/rData/final11.RData")
+
+# Must rewrite these with list in mind from loop above 
 
 # Q1) What is the the mean and variance of the estimated effects under this trial design?
 for (col_dex in 1:ncol(final_est_eff_df)) {
