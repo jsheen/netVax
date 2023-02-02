@@ -151,27 +151,47 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
-save(final, file = "~/netVax/code_output/twostage/rData/final11.RData")
+save(final, file = "~/netVax/code_output/twostage/rData/test.RData")
 
-# Must rewrite these with list in mind from loop above 
+# Load results -----------------------------------------------------------------
+#load('~/netVax/code_output/twostage/rData/final025.RData')
+load('~/netVax/code_output/twostage/rData/final11.RData')
+final_est_eff_res <- list()
+final_bs_est_eff_res <- list()
+final_pval_res <- list()
+final_ASE <- list()
+list_dex <- 1
+for (i in 1:length(final)) {
+  final_est_eff_res[[list_dex]] <- final[[list_dex]][[1]]
+  final_bs_est_eff_res[[list_dex]] <- final[[list_dex]][[2]]
+  final_pval_res[[list_dex]] <- final[[list_dex]][[3]]
+  final_ASE[[list_dex]] <- final[[list_dex]][[4]]
+  list_dex <- list_dex + 1
+}
+final_est_eff_res_df <- do.call(rbind, final_est_eff_res)
+final_bs_est_eff_res_df <- do.call(rbind, final_bs_est_eff_res)
+final_pval_res_df <- do.call(rbind, final_pval_res)
+final_ASE_df <- do.call(rbind, final_ASE)
 
+# Answer questions -------------------------------------------------------------
 # Q1) What is the the mean and variance of the estimated effects under this trial design?
-for (col_dex in 1:ncol(final_est_eff_df)) {
+for (col_dex in 1:ncol(final_est_eff_res_df)) {
   print(paste0('Effect estimate: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
-  print(paste0('Mean: ', mean(final_est_eff_df[,col_dex] * 100, na.rm=T)))
-  print(paste0('Mean of the 95% bootstrap CI: ', mean(bs_final_est_eff_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('Mean: ', mean(final_est_eff_res_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('SD: ', sd(final_est_eff_res_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('Mean of the width of the 95% bootstrap CI: ', mean(final_bs_est_eff_res_df[,col_dex] * 100, na.rm=T)))
 }
 
 # Q2) What is the power to detect an effect under this trial design using the logistic model?
-for (col_dex in 1:ncol(final_pval_df)) {
+for (col_dex in 1:ncol(final_pval_res_df)) {
   print(paste0('Power: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
-  print(length(which(final_pval_df[,col_dex] < 0.05)) / length(which(!is.na(final_pval_df[,col_dex]))))
+  print(length(which(final_pval_res_df[,col_dex] < 0.05)) / length(which(!is.na(final_pval_res_df[,col_dex]))))
 }
 
 # Q3) What is the true effect across groups (mean and variance)?
-for (col_dex in 1:ncol(final_df)) {
+for (col_dex in 1:ncol(final_ASE_df)) {
   print(paste0('True effect: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
-  print(paste0('Mean: ', mean(final_df[,col_dex] * 100, na.rm=T)))
-  print(paste0('SD: ', sd(final_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('Mean: ', mean(final_ASE_df[,col_dex] * 100, na.rm=T)))
+  print(paste0('SD: ', sd(final_ASE_df[,col_dex] * 100, na.rm=T)))
 }
 
