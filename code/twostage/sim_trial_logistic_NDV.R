@@ -8,10 +8,11 @@ N_sims = 1000 # Total number of cluster simulations in simulation bank
 N_sample = 200 # Number sampled from each cluster
 N_trials = 1000 # Number of trial simulations to conduct
 cutoff = 90
-assignment_mechanisms = c(0, 0.1, 0.25)
-N_assignment_mechanism_sets = 4
+num_bootstrap_sample = 1000
+assignment_mechanisms = c(0, 0.1, 0.2)
+N_assignment_mechanism_sets = 6
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 1.1
+R0_vax = 0.25
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -22,7 +23,7 @@ to_use_ls_dex <- 1
 for (assignment_mechanism in assignment_mechanisms) {
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_mort0.85_eit0.005_vaxEff0.6_assign', assignment_mechanism, '_sim', sim_num, '.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt7_R0vax', R0_vax, '_eit0.005_vaxEff0.8_assign', assignment_mechanism, '_sim', sim_num, '_NDV.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -42,7 +43,7 @@ run_trial <- function(trial_num) {
   clusters_to_use_dex <- 1
   trial_dfs <- list()
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_mort0.85_eit0.005_vaxEff0.6_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt7_R0vax', R0_vax, '_eit0.005_vaxEff0.8_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_NDV.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
@@ -102,7 +103,7 @@ run_trial <- function(trial_num) {
         est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
         # Do bootstrap estimate
         bs_ests <- c()
-        for (iter in 1:1000) {
+        for (iter in 1:num_bootstrap_sample) {
           # 1) construct bootstrap sample:
           bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
           bs_samp <- to_analyze[bs_indices,]
@@ -151,11 +152,10 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
-save(final, file = "~/netVax/code_output/twostage/rData/test.RData")
+save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_NDV.RData"))
 
 # Load results -----------------------------------------------------------------
-#load('~/netVax/code_output/twostage/rData/final025.RData')
-load('~/netVax/code_output/twostage/rData/final11.RData')
+load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_NDV.RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()

@@ -149,11 +149,11 @@ def runSim(param_set):
         surv_dead_con = dict.fromkeys(G.nodes(), t_no_inf_con)
         for node in G.nodes():
             node_hist = full_second_half_con.node_history(node)
-            if 'I_N' in node_hist[1]:
-                surv_inf_con[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'I_N')[0][0]]
+            if 'E' in node_hist[1]:
+                surv_inf_con[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'E')[0][0]] # fix later
             if 'D' in node_hist[1]:
                 surv_dead_con[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
-                if node_hist[1][0] == 'D':
+                if node_hist[1][0] == 'D': # This corrects for deaths in the first time step, which should not be counted
                     surv_inf_con[node] = -1
         # Treatment
         I_N_second_half_trt = full_second_half_trt.summary()[1]['I_N']
@@ -163,8 +163,8 @@ def runSim(param_set):
         surv_dead_trt = dict.fromkeys(G.nodes(), t_no_inf_trt)
         for node in G.nodes():
             node_hist = full_second_half_trt.node_history(node)
-            if 'I_N' in node_hist[1]:
-                surv_inf_trt[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'I_N')[0][0]]
+            if 'E' in node_hist[1]:
+                surv_inf_trt[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'E')[0][0]]
             if 'D' in node_hist[1]:
                 surv_dead_trt[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
                 if node_hist[1][0] == 'D':

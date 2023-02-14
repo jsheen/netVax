@@ -137,6 +137,8 @@ if run_sims:
         J.add_edge(('I', 'V'), ('I', 'VE'), rate = 0)
         J.add_edge(('I', 'V'), ('I', 'VE'), rate = 0)
         J.add_edge(('V', 'S'), ('V', 'V'), rate = 0)
+        J.add_edge(('VE', 'S'), ('VE', 'V'), rate = 0)
+        J.add_edge(('VI', 'S'), ('VI', 'V'), rate = 0)
         # Run simulations -----------------------------------------------------
         nsim = 100
         cc_greater_1 = []

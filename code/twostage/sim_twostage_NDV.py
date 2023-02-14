@@ -95,10 +95,12 @@ def runSim(param_set):
     J = nx.DiGraph()
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
-    # There are no vaccinated nodes in this simulation so the following transmissions are irrelevant
-    J.add_edge(('I', 'V'), ('I', 'VE'), rate = (1 - vax_eff) * beta_R0_wt)
-    J.add_edge(('I', 'V'), ('I', 'VE'), rate = (1 - vax_eff) * beta_R0_wt)
-    J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax)
+    # Transmissions for vaccinated nodes
+    J.add_edge(('I', 'V'), ('I', 'VE'), rate = beta_R0_wt)
+    J.add_edge(('I', 'V'), ('I', 'VE'), rate = beta_R0_wt)
+    J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax) 
+    J.add_edge(('VE', 'S'), ('VE', 'V'), rate = beta_R0_vax)
+    J.add_edge(('VI', 'S'), ('VI', 'V'), rate = beta_R0_vax)
     
     # Set threshold value of number of infections at time t -------------------
     threshold = 1

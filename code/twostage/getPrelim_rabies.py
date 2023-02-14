@@ -33,7 +33,7 @@ delta = 1 / 6
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 overdispersions = [1]
-R0s = [0.25, 1.1, 3]
+R0s = [3]
 param_sets = []
 for i in Ns:
     for j in overdispersions:
@@ -68,33 +68,7 @@ if run_sims:
         def estimate_beta(R0):
             beta = R0 / (alpha * ((1 / tau2) + (1 / delta)))
             return beta
-        # Find median beta that leads to desired R0 (2000 sims) ----------------
-        p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
-        beta_lst = []
-        for i in range(100):
-            continue_loop = True
-            while (continue_loop):
-                z = []
-                for i in range(N_cluster):
-                    deg = 0
-                    while (deg == 0):
-                        deg = np.random.negative_binomial(k_overdispersion, p)
-                    z.append(deg)
-                if (sum(z) % 2 == 0):
-                    continue_loop = False
-            G=nx.configuration_model(z)
-            G=nx.Graph(G)
-            G.remove_edges_from(nx.selfloop_edges(G))
-            # Remove singletons
-            list_of_deg0 = [node for node in G.nodes if G.degree(node) == 0]
-            for node_deg0 in list_of_deg0:
-                G.add_edge(node_deg0, np.random.choice(G.nodes()))
-            degree_sequence = [d for n, d in G.degree()]
-            if len(np.where(degree_sequence == 0)[0]) > 0:
-                raise NameError('There are singletons in this graph.')
-            beta = estimate_beta(R0)
-            beta_lst.append(beta)
-        beta_R0 = statistics.median(beta_lst)
+        beta_R0 = estimate_beta(R0)
         # Specify transitions and transmissions -------------------------------
         H = nx.DiGraph()
         H.add_node('S')
@@ -168,33 +142,7 @@ def getPrelim(param_set):
     def estimate_beta(R0):
         beta = R0 / (alpha * ((1 / tau2) + (1 / delta)))
         return beta
-    # Find median beta that leads to desired R0 (2000 sims) ----------------
-    p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
-    beta_lst = []
-    for i in range(2000):
-        continue_loop = True
-        while (continue_loop):
-            z = []
-            for i in range(N_cluster):
-                deg = 0
-                while (deg == 0):
-                    deg = np.random.negative_binomial(k_overdispersion, p)
-                z.append(deg)
-            if (sum(z) % 2 == 0):
-                continue_loop = False
-        G=nx.configuration_model(z)
-        G=nx.Graph(G)
-        G.remove_edges_from(nx.selfloop_edges(G))
-        # Remove singletons
-        list_of_deg0 = [node for node in G.nodes if G.degree(node) == 0]
-        for node_deg0 in list_of_deg0:
-            G.add_edge(node_deg0, np.random.choice(G.nodes()))
-        degree_sequence = [d for n, d in G.degree()]
-        if len(np.where(degree_sequence == 0)[0]) > 0:
-            raise NameError('There are singletons in this graph.')
-        beta = estimate_beta(R0)
-        beta_lst.append(beta)
-    beta_R0 = statistics.median(beta_lst)
+    beta_R0 = estimate_beta(R0)
     
     # Specify transitions and transmissions -----------------------------------
     H = nx.DiGraph()
@@ -214,7 +162,7 @@ def getPrelim(param_set):
     J.add_edge(('I_R', 'V'), ('I_R', 'E'), rate = 0)
     J.add_edge(('V', 'S'), ('V', 'V'), rate = 0)
     
-    # Find day on average when expected_It_N_N of active infections (2000 sims) -
+    # Find day on average when expected_It_N_N of active infections (2000 sims)
     nsim = 2000
     I_series = []
     while (len(I_series) < nsim):
