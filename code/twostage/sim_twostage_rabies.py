@@ -139,8 +139,8 @@ def runSim(param_set):
                 test_vax_cnt += 1
         if test_vax_cnt != len(enrolled_nodes):
             raise NameError("Error in assignment.")
-        full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float('Inf'), return_full_data=True)    
-        full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
+        full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float(500), return_full_data=True)    
+        full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(500), return_full_data=True)    
         # Control
         I_N_second_half_con = full_second_half_con.summary()[1]['I_N']
         I_R_second_half_con = full_second_half_con.summary()[1]['I_R']
@@ -150,7 +150,7 @@ def runSim(param_set):
         for node in G.nodes():
             node_hist = full_second_half_con.node_history(node)
             if 'E' in node_hist[1]:
-                surv_inf_con[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'E')[0][0]] # fix later
+                surv_inf_con[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'E')[0][0]]
             if 'D' in node_hist[1]:
                 surv_dead_con[node] = node_hist[0][np.where(np.array(node_hist[1]) == 'D')[0][0]]
                 if node_hist[1][0] == 'D': # This corrects for deaths in the first time step, which should not be counted

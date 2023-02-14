@@ -132,8 +132,8 @@ def runSim(param_set):
                 test_vax_cnt += 1
         if test_vax_cnt != len(enrolled_nodes):
             raise NameError("Error in assignment.")
-        full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float('Inf'), return_full_data=True)    
-        full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
+        full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float(500), return_full_data=True)    
+        full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(500), return_full_data=True)    
         # Control
         t_no_inf_con = full_second_half_con.t()[np.where((full_second_half_con.I() == 0) & (full_second_half_con.summary()[1]['E'] == 0))[0][0]]
         surv_inf_con = dict.fromkeys(G.nodes(), t_no_inf_con)
