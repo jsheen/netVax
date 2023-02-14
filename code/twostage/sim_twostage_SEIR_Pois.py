@@ -164,7 +164,7 @@ def runSim(param_set):
                 out_f.write(str(surv_inf_trt.get(node)))
                 out_f.write(',')
                 out_f.write(str(surv_inf_con.get(node)))
-                out_f.write(',')
+                out_f.write('\n')
     else:
         with open(home + '/netVax/code_output/twostage/sims/2stg_N' + str(N_cluster) + "_R0wt" + str(R0_wt) + 
           "_R0vax" + str(R0_vax) + "_eit" + str(eit) +
