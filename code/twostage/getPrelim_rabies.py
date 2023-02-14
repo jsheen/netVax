@@ -58,6 +58,7 @@ if run_sims:
         R0 = param_set[2]
         eit = 0.005
         mean_degree = 15
+        p = 1.0 - mean_degree / (mean_degree + k_overdispersion)
         if N_cluster == 1000:
             initial_infections_per_cluster = 4
         elif N_cluster == 10000:
