@@ -97,7 +97,6 @@ def runSim(param_set):
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
     # Transmissions for vaccinated nodes
     J.add_edge(('I', 'V'), ('I', 'VE'), rate = beta_R0_wt)
-    J.add_edge(('I', 'V'), ('I', 'VE'), rate = beta_R0_wt)
     J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax) 
     J.add_edge(('VE', 'S'), ('VE', 'V'), rate = beta_R0_vax)
     J.add_edge(('VI', 'S'), ('VI', 'V'), rate = beta_R0_vax)

@@ -128,9 +128,7 @@ if run_sims:
         return_statuses = ('S', 'E', 'I', 'R', 'V')
         J = nx.DiGraph()
         J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
-        J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
         # There are no vaccinated nodes in this simulation so the following transmissions are irrelevant
-        J.add_edge(('I', 'V'), ('I', 'E'), rate = 0)
         J.add_edge(('I', 'V'), ('I', 'E'), rate = 0)
         J.add_edge(('V', 'S'), ('V', 'V'), rate = 0)
         
@@ -255,9 +253,7 @@ def getPrelim(param_set):
     return_statuses = ('S', 'E', 'I', 'R', 'V')
     J = nx.DiGraph()
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
-    J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
     # There are no vaccinated nodes in this simulation so the following transmissions are irrelevant
-    J.add_edge(('I', 'V'), ('I', 'E'), rate = 0)
     J.add_edge(('I', 'V'), ('I', 'E'), rate = 0)
     J.add_edge(('V', 'S'), ('V', 'V'), rate = 0)
     

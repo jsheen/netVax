@@ -87,9 +87,7 @@ def runSim(param_set):
     return_statuses = ('S', 'E', 'I', 'R', 'V')
     J = nx.DiGraph()
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
-    J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
     J.add_edge(('I', 'V'), ('I', 'E'), rate = (1 - vax_eff) * beta_R0_wt)
-    J.add_edge(('I', 'V'), ('I', 'E'), rate = beta_R0_vax)
     J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax)
     
     # Set threshold value of number of infections at time t -------------------
