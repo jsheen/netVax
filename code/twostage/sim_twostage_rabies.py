@@ -144,7 +144,10 @@ def runSim(param_set):
         # Control
         I_N_second_half_con = full_second_half_con.summary()[1]['I_N']
         I_R_second_half_con = full_second_half_con.summary()[1]['I_R']
-        t_no_inf_con = full_second_half_con.t()[np.where((I_N_second_half_con == 0) & (I_R_second_half_con == 0) & (full_second_half_con.summary()[1]['E'] == 0))[0][0]]
+        if len(np.where((I_N_second_half_con == 0) & (I_R_second_half_con == 0) & (full_second_half_con.summary()[1]['E'] == 0))[0]) == 0:
+            t_no_inf_con = 500
+        else:
+            t_no_inf_con = full_second_half_con.t()[np.where((I_N_second_half_con == 0) & (I_R_second_half_con == 0) & (full_second_half_con.summary()[1]['E'] == 0))[0][0]]
         surv_inf_con = dict.fromkeys(G.nodes(), t_no_inf_con)
         surv_dead_con = dict.fromkeys(G.nodes(), t_no_inf_con)
         for node in G.nodes():
@@ -158,7 +161,10 @@ def runSim(param_set):
         # Treatment
         I_N_second_half_trt = full_second_half_trt.summary()[1]['I_N']
         I_R_second_half_trt = full_second_half_trt.summary()[1]['I_R']
-        t_no_inf_trt = full_second_half_trt.t()[np.where((I_N_second_half_trt == 0) & (I_R_second_half_trt == 0) & (full_second_half_trt.summary()[1]['E'] == 0))[0][0]]
+        if len(np.where((I_N_second_half_trt == 0) & (I_R_second_half_trt == 0) & (full_second_half_trt.summary()[1]['E'] == 0))[0]) == 0:
+            t_no_inf_trt = 500
+        else:
+            t_no_inf_trt = full_second_half_trt.t()[np.where((I_N_second_half_trt == 0) & (I_R_second_half_trt == 0) & (full_second_half_trt.summary()[1]['E'] == 0))[0][0]]
         surv_inf_trt = dict.fromkeys(G.nodes(), t_no_inf_trt)
         surv_dead_trt = dict.fromkeys(G.nodes(), t_no_inf_trt)
         for node in G.nodes():

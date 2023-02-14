@@ -10,9 +10,9 @@ N_trials = 1000 # Number of trial simulations to conduct
 cutoff = 90
 num_bootstrap_sample = 1
 assignment_mechanisms = c(0, 0.1, 0.2)
-N_assignment_mechanism_sets = 5
+N_assignment_mechanism_sets = 10
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 1.1
+R0_vax = 0.25
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }

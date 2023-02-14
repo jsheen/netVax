@@ -33,7 +33,7 @@ delta = 1 / 6
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 overdispersions = [1]
-R0s = [3]
+R0s = [0.25, 1.1, 3]
 param_sets = []
 for i in Ns:
     for j in overdispersions:
