@@ -10,9 +10,9 @@ N_trials = 1000 # Number of trial simulations to conduct
 cutoff = 90
 num_bootstrap_sample = 1
 assignment_mechanisms = c(0, 0, 0.1, 0.2)
-N_assignment_mechanism_sets = 40
+N_assignment_mechanism_sets = 2
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.25
+R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -74,7 +74,7 @@ run_trial <- function(trial_num) {
         assignment_mech_ls_dex <- assignment_mech_ls_dex + 1
       }
     }
-    assignment_mech_df <- do.call(rbind, assignment_mech_ls) 
+    assignment_mech_df <- do.call(rbind, assignment_mech_ls)
     if (is.null(assignment_mech_df)) {
       sampled_ls[[assignment_mech_dex]] <- data.frame(matrix(NA, nrow=1, ncol=1))
     } else {
