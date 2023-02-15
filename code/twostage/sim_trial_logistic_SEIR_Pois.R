@@ -5,12 +5,12 @@ library("stats")
 # Parameters -------------------------------------------------------------------
 set.seed(0)
 N_sims = 1000 # Total number of cluster simulations in simulation bank
-N_sample = 200 # Number sampled from each cluster
+N_sample = 100 # Number sampled from each cluster
 N_trials = 1000 # Number of trial simulations to conduct
 cutoff = 90
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0.1, 0.2)
-N_assignment_mechanism_sets = 1
+assignment_mechanisms = c(0, 0, 0.1, 0.2)
+N_assignment_mechanism_sets = 8
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
@@ -194,4 +194,15 @@ for (col_dex in 1:ncol(final_ASE_df)) {
   print(paste0('Mean: ', mean(final_ASE_df[,col_dex] * 100, na.rm=T)))
   print(paste0('SD: ', sd(final_ASE_df[,col_dex] * 100, na.rm=T)))
 }
+
+# Average spillover effect histogram
+hist(final_ASE_df[,2], main="From 0% to 10% Vaccinated", xlab="True Average Spillover Effect")
+abline(v=0, col='red', lwd=3, lty=2)
+
+# Type I error histogram
+hist(final_ASE_df[,1], main="Comparing 0% to 0% Vaccinated", xlab="True Average Spillover Effect")
+abline(v=0, col='red', lwd=3, lty=2)
+
+
+
 
