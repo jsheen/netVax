@@ -26,12 +26,15 @@ sigma = 1 / 5
 gamma = 1 / 10
 psi = 1 / 120
 mean_degree = 15
+cutoff = 120
 
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 R0_wts = [3]
+vaxs = [0, 0.5, 0.9, 1.1]
 vaxs = [0]
 vax_effs = [0.8]
+assigns = [0, 0.1, 0.2]
 assigns = [0]
 sim_num = 1000
 param_sets = []
@@ -130,7 +133,7 @@ def runSim(param_set):
         full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float('Inf'), return_full_data=True)    
 
         # Treatment
-        t_no_inf_trt = full_second_half_trt.t()[np.where((full_second_half_trt.I() == 0) & (full_second_half_trt.summary()[1]['E'] == 0))[0][0]]
+        t_no_inf_trt = cutoff
         surv_inf_trt = dict.fromkeys(G.nodes(), t_no_inf_trt)
         for node in G.nodes():
             node_hist = full_second_half_trt.node_history(node)
