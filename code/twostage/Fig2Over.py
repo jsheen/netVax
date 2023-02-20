@@ -22,7 +22,7 @@ home = str(Path.home())
 sigma = 1 / 5
 gamma = 1 / 10
 psi = 1 / 120
-nsim = 100
+nsim = 20
 
 # Set parameters --------------------------------------------------------------
 param_set = [1000, 1, 3, 1.1, 0.8, 0.1]
@@ -58,15 +58,15 @@ else:
 # Specify transitions and transmissions -------------------------------
 H = nx.DiGraph()
 H.add_node('S')
-H.add_node('V')
+H.add_edge('V_E', 'V_I', rate=sigma)
+H.add_edge('V_I', 'V_R', rate=gamma)
 H.add_edge('E', 'I', rate=sigma)
 H.add_edge('I', 'R', rate=gamma)
-H.add_edge('V', 'S', rate=psi)
-return_statuses = ('S', 'E', 'I', 'R', 'V')
+return_statuses = ('S', 'E', 'I', 'R', 'V_E', 'V_I', 'V_R')
 J = nx.DiGraph()
 J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
-J.add_edge(('I', 'V'), ('I', 'E'), rate = (1 - vax_eff) * beta_R0_wt)
-J.add_edge(('V', 'S'), ('V', 'V'), rate = beta_R0_vax)
+J.add_edge(('I', 'V_R'), ('I', 'E'), rate = (1 - vax_eff) * beta_R0_wt)
+J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = beta_R0_vax)
 
 # Set threshold value of number of infections at time t -------------------
 threshold = 1
@@ -106,10 +106,10 @@ for sim in range(nsim):
         curr_IC = full_first_half.get_statuses(list(G.nodes()), t_first_half[-1])
         suscep_nodes = [k for k,v in curr_IC.items() if v == 'S']
         enrolled_nodes = np.random.choice(suscep_nodes, size=int(np.ceil(assign * len(suscep_nodes))), replace=False)
-        curr_IC.update(curr_IC.fromkeys(enrolled_nodes, 'V'))
+        curr_IC.update(curr_IC.fromkeys(enrolled_nodes, 'V_I'))
         test_vax_cnt = 0
         for k,v in curr_IC.items():
-            if v == 'V':
+            if v == 'V_I':
                 test_vax_cnt += 1
         if test_vax_cnt != len(enrolled_nodes):
             raise NameError("Error in assignment.")
@@ -126,12 +126,12 @@ for sim in range(nsim):
         if full_second_half_con.t()[-1] < 90:
             count_burnout += 1
         # Treatment (I among unvaccinated)
-#        R_unvax = []
-#        for t in range(90):
-#            count = 0
-#            for node in list(set(suscep_nodes) - set(enrolled_nodes)):
-#                if full_second_half_trt.get_statuses([node], t)[node] == 'R':
-#                    count += 1
-#            R_unvax.append(count)
-#        plt.plot(range(90), np.array(R_unvax) / 1000, 'orange')
+        R_unvax = []
+        for t in range(90):
+            count = 0
+            for node in list(set(G.nodes) - set(enrolled_nodes)):
+                if full_second_half_trt.get_statuses([node], t)[node] == 'R':
+                    count += 1
+            R_unvax.append(count)
+        plt.plot(range(90), np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
         

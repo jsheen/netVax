@@ -23,7 +23,8 @@ sigma = 1 / 5
 gamma = 1 / 10
 psi = 1 / 120
 epsilon = 1 / 21
-nsim = 20
+cutoff = 300
+nsim = 100
 
 # Set parameters --------------------------------------------------------------
 param_set = [1000, 1, 3, 1.1, 0.8, 0.1]
@@ -47,6 +48,7 @@ filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_k" + str(k
 prelim_data_wt = pd.read_csv(filename, header=None)
 beta_R0_wt = prelim_data_wt[0][0]
 interrupt_t = prelim_data_wt[1][0]
+interrupt_t = 100
 # Vax
 R0_vax = vax
 if float(R0_vax) > 0:
@@ -118,22 +120,37 @@ for sim in range(nsim):
         full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float(500), return_full_data=True)    
         full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(500), return_full_data=True)    
         # Control
-        plt.plot(full_second_half_con.t(), np.array(full_second_half_con.R()) / 1000, 'grey')
-        plt.xlim(0, 200)
-        plt.ylim(-0.05, 1)
+#        I_unvax_con = []
+#        for t in range(cutoff):
+#            count = 0
+#            for node in list(suscep_nodes):
+#                if full_second_half_con.get_statuses([node], t)[node] == 'I':
+#                    count += 1
+#            I_unvax_con.append(count)
+        plt.plot(full_second_half_con.t(), np.array(full_second_half_con.I()) / 1000, 'grey')
+        plt.xlim(0, cutoff)
+        plt.ylim(-0.05, 0.3)
         plt.xlabel('Days after intervention', fontdict={'size':20})
-        plt.ylabel('Cumulative incidence', fontdict={'size':20})
+        plt.ylabel('Prevalence (I/N)', fontdict={'size':20})
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
-        if full_second_half_con.t()[-1] < 200:
+        if full_second_half_con.t()[-1] < cutoff:
             count_burnout += 1
         # Treatment (I among unvaccinated)
-        R_unvax = []
-        for t in range(200):
+        I_unvax = []
+        for t in range(cutoff):
             count = 0
-            for node in list(set(suscep_nodes) - set(enrolled_nodes)):
-                if full_second_half_trt.get_statuses([node], t)[node] == 'R':
+            for node in list(set(G.nodes()) - set(enrolled_nodes)):
+                if full_second_half_trt.get_statuses([node], t)[node] == 'I':
                     count += 1
-            R_unvax.append(count)
-        plt.plot(range(200), np.array(R_unvax) / 1000, 'orange')
-        
+            I_unvax.append(count)
+        plt.plot(range(cutoff), np.array(I_unvax) / (1000 - len(enrolled_nodes)), 'orange')
+        plt.plot(full_second_half_trt.t(), np.array(full_second_half_trt.summary()[1]['V']) / 1000, 'blue')
+# Always looking at prevalence among the unvaccinated
+
+
+
+
+
+
+
