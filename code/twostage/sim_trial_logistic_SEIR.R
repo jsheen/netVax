@@ -7,10 +7,10 @@ set.seed(0)
 N_sims = 1000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
 N_trials = 1000 # Number of trial simulations to conduct
-cutoff = 90
+cutoff = 120
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0, 0.1, 0.2)
-N_assignment_mechanism_sets = 2
+assignment_mechanisms = c(0, 0, 0.1)
+N_assignment_mechanism_sets = 6
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {

@@ -24,6 +24,7 @@ gamma = 1 / 10
 psi = 1 / 120
 mean_degree = 15
 nsim = 20
+cutoff = 120
 
 # Set parameters --------------------------------------------------------------
 param_set = [1000, 3, 1.1, 0.8, 0.1]
@@ -115,21 +116,21 @@ for sim in range(nsim):
         full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(500), return_full_data=True)    
         # Control
         plt.plot(full_second_half_con.t(), np.array(full_second_half_con.R()) / 1000, 'grey')
-        plt.xlim(0, 90)
+        plt.xlim(0, cutoff)
         plt.ylim(-0.05, 1)
         plt.xlabel('Days after intervention', fontdict={'size':20})
         plt.ylabel('Cumulative incidence', fontdict={'size':20})
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
-        if full_second_half_con.t()[-1] < 90:
+        if full_second_half_con.t()[-1] < cutoff:
             count_burnout += 1
         # Treatment (I among unvaccinated)
         R_unvax = []
-        for t in range(90):
+        for t in range(cutoff):
             count = 0
             for node in list(set(G.nodes) - set(enrolled_nodes)):
                 if full_second_half_trt.get_statuses([node], t)[node] == 'R':
                     count += 1
             R_unvax.append(count)
-        plt.plot(range(90), np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
+        plt.plot(range(cutoff), np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
         

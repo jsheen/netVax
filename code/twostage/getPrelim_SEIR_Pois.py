@@ -27,12 +27,11 @@ run_sims = False
 sigma = 1 / 5
 gamma = 1 / 10
 psi = 1 / 120
-mort = 0.85
 mean_degree = 15
 
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
-R0s = [0.25, 1.1, 3]
+R0s = [0.5, 0.9, 1.1, 3]
 param_sets = []
 for i in Ns:
     for j in R0s:
@@ -115,16 +114,16 @@ if run_sims:
         # Specify transitions and transmissions -------------------------------
         H = nx.DiGraph()
         H.add_node('S')
-        H.add_node('V')
+        H.add_edge('V_E', 'V_I', rate=sigma)
+        H.add_edge('V_I', 'V_R', rate=gamma)
         H.add_edge('E', 'I', rate=sigma)
         H.add_edge('I', 'R', rate=gamma)
-        H.add_edge('V', 'S', rate=psi)
-        return_statuses = ('S', 'E', 'I', 'R', 'V')
+        return_statuses = ('S', 'E', 'I', 'R', 'V_E', 'V_I', 'V_R')
         J = nx.DiGraph()
         J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
-        # There are no vaccinated nodes in this simulation so the following transmissions are irrelevant
-        J.add_edge(('I', 'V'), ('I', 'E'), rate = 0)
-        J.add_edge(('V', 'S'), ('V', 'V'), rate = 0)
+        # The rest have to do with vaccination
+        J.add_edge(('I', 'V_R'), ('I', 'E'), rate = 0)
+        J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = 0)
         
         # Run simulations -----------------------------------------------------
         nsim = 100
@@ -158,9 +157,7 @@ if run_sims:
             IC = defaultdict(lambda: 'S')
             for node in range(initial_infections_per_cluster):
                 IC[node] = 'I'
-            t, S, E, I, R, D, V, VE, VI = EoN.Gillespie_simple_contagion(G, H, J, IC, return_statuses, tmax = float('Inf'))
-            plt.plot(t, I)
-            plt.plot(t, D)        
+            t, S, E, I, R, V_E, V_I, V_R = EoN.Gillespie_simple_contagion(G, H, J, IC, return_statuses, tmax = float('Inf'))
         # Should show graphically that the number of connected components is small
         print(str(len(cc_greater_1) / nsim))
                    
@@ -236,73 +233,76 @@ def getPrelim(param_set):
     # Specify transitions and transmissions -------------------------------
     H = nx.DiGraph()
     H.add_node('S')
-    H.add_node('V')
+    H.add_edge('V_E', 'V_I', rate=sigma)
+    H.add_edge('V_I', 'V_R', rate=gamma)
     H.add_edge('E', 'I', rate=sigma)
     H.add_edge('I', 'R', rate=gamma)
-    H.add_edge('V', 'S', rate=psi)
-    return_statuses = ('S', 'E', 'I', 'R', 'V')
+    return_statuses = ('S', 'E', 'I', 'R', 'V_E', 'V_I', 'V_R')
     J = nx.DiGraph()
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
-    # There are no vaccinated nodes in this simulation so the following transmissions are irrelevant
-    J.add_edge(('I', 'V'), ('I', 'E'), rate = 0)
-    J.add_edge(('V', 'S'), ('V', 'V'), rate = 0)
+    # The rest have to do with vaccination
+    J.add_edge(('I', 'V_R'), ('I', 'E'), rate = 0)
+    J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = 0)
     
     # Find day on average when expected_It_N of active infections (2000 sims) -
-    nsim = 2000
-    I_series = []
-    while (len(I_series) < nsim):
-        #if (len(I_series) % 200 == 0):
-            #print(len(I_series))
-        continue_loop = True
-        while (continue_loop):
-            z = []
-            for i in range(N_cluster):
-                deg = 0
-                while (deg == 0):
-                    deg = np.random.poisson(mean_degree)
-                z.append(deg)
-            for i in range(len(z)):
-                if (z[i] == 0):
-                    z[i] == 1
-            if (sum(z) % 2 == 0):
-                continue_loop = False
-        G=nx.configuration_model(z)
-        G=nx.Graph(G)
-        G.remove_edges_from(nx.selfloop_edges(G))
-        # Remove singletons
-        list_of_deg0 = [node for node in G.nodes if G.degree(node) == 0]
-        for node_deg0 in list_of_deg0:
-            G.add_edge(node_deg0, np.random.choice(G.nodes()))
-        degree_sequence = [d for n, d in G.degree()]
-        if len(np.where(degree_sequence == 0)[0]) > 0:
-            raise NameError('There are singletons in this graph.')
-        IC = defaultdict(lambda: 'S')
-        for node in range(initial_infections_per_cluster):
-            IC[node] = 'I'
-        t, S, E, I, R, V = EoN.Gillespie_simple_contagion(G, H, J, IC, return_statuses, tmax = 200)
-        next_t = 0
-        to_add_row = []
-        for t_dex in range(len(t)):
-            if t[t_dex] >= next_t:
-                to_add_row.append(I[t_dex])
-                next_t += 1
-        I_series.append(to_add_row)
-    interrupt_t = None
-    
-    # Find first day of sim where the ave. num. of infects >= expected_It_N ---
-    for day_dex in range(nsim):
-        focal_dist = []
-        for I_series_dex in range(len(I_series)):
-            if len(I_series[I_series_dex]) > day_dex:
-                focal_dist.append(I_series[I_series_dex][day_dex] / N_cluster)
-        if len(focal_dist) <= 200:
-            print("Not enough simulations (<10%) to get average number of infections on this day.")
-            interrupt_t = 'na'
-            break
-        else:
-            if statistics.mean(focal_dist) >= eit:
-                interrupt_t = day_dex
+    if R0 > 2:
+        nsim = 2000
+        I_series = []
+        while (len(I_series) < nsim):
+            #if (len(I_series) % 200 == 0):
+                #print(len(I_series))
+            continue_loop = True
+            while (continue_loop):
+                z = []
+                for i in range(N_cluster):
+                    deg = 0
+                    while (deg == 0):
+                        deg = np.random.poisson(mean_degree)
+                    z.append(deg)
+                for i in range(len(z)):
+                    if (z[i] == 0):
+                        z[i] == 1
+                if (sum(z) % 2 == 0):
+                    continue_loop = False
+            G=nx.configuration_model(z)
+            G=nx.Graph(G)
+            G.remove_edges_from(nx.selfloop_edges(G))
+            # Remove singletons
+            list_of_deg0 = [node for node in G.nodes if G.degree(node) == 0]
+            for node_deg0 in list_of_deg0:
+                G.add_edge(node_deg0, np.random.choice(G.nodes()))
+            degree_sequence = [d for n, d in G.degree()]
+            if len(np.where(degree_sequence == 0)[0]) > 0:
+                raise NameError('There are singletons in this graph.')
+            IC = defaultdict(lambda: 'S')
+            for node in range(initial_infections_per_cluster):
+                IC[node] = 'I'
+            t, S, E, I, R, V_E, V_I, V_R = EoN.Gillespie_simple_contagion(G, H, J, IC, return_statuses, tmax = 200)
+            next_t = 0
+            to_add_row = []
+            for t_dex in range(len(t)):
+                if t[t_dex] >= next_t:
+                    to_add_row.append(I[t_dex])
+                    next_t += 1
+            I_series.append(to_add_row)
+        interrupt_t = None
+        
+        # Find first day of sim where the ave. num. of infects >= expected_It_N ---
+        for day_dex in range(nsim):
+            focal_dist = []
+            for I_series_dex in range(len(I_series)):
+                if len(I_series[I_series_dex]) > day_dex:
+                    focal_dist.append(I_series[I_series_dex][day_dex] / N_cluster)
+            if len(focal_dist) <= 200:
+                print("Not enough simulations (<10%) to get average number of infections on this day.")
+                interrupt_t = 'na'
                 break
+            else:
+                if statistics.mean(focal_dist) >= eit:
+                    interrupt_t = day_dex
+                    break
+    else:
+        interrupt_t = -1
         
     # Write output ------------------------------------------------------------    
     filename = home + "/netVax/code_output/prelim/N" + str(N_cluster) + "_R0" + str(R0) + "_eit" + str(eit) + '_SEIR_Pois.csv'
