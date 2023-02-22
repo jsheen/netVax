@@ -73,7 +73,6 @@ threshold = 1
 count_burnout = 0
 
 # Simulate epidemics with vaccination -------------------------------------
-final_sizes = []
 for sim in range(nsim):
     continue_loop = True
     while (continue_loop):
@@ -117,7 +116,6 @@ for sim in range(nsim):
         full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(500), return_full_data=True)    
         # Control
         plt.plot(full_second_half_con.t(), np.array(full_second_half_con.R()) / 1000, 'grey')
-        final_sizes.append(full_second_half_con.R()[-1])
         plt.xlim(0, cutoff)
         plt.ylim(-0.05, 1)
         plt.xlabel('Days after intervention', fontdict={'size':20})
@@ -135,5 +133,6 @@ for sim in range(nsim):
                     count += 1
             R_unvax.append(count)
         plt.plot(range(cutoff), np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
-plt.hist(final_sizes)
+        plt.plot(full_second_half_trt.t() + t_first_half[-1], full_second_half_trt.summary()[1]['V_R'] / 1000, 'blue')
+    
         

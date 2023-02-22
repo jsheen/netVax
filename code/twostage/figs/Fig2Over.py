@@ -22,7 +22,7 @@ home = str(Path.home())
 sigma = 1 / 5
 gamma = 1 / 10
 psi = 1 / 120
-nsim = 20
+nsim = 50
 cutoff = 120
 
 # Set parameters --------------------------------------------------------------
@@ -135,4 +135,5 @@ for sim in range(nsim):
                     count += 1
             R_unvax.append(count)
         plt.plot(range(cutoff), np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
+        plt.plot(full_second_half_trt.t() + t_first_half[-1], full_second_half_trt.summary()[1]['V_R'] / 1000, 'blue')
         

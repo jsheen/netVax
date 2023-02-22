@@ -1,16 +1,17 @@
 # Script used to simulate two-stage trials -------------------------------------
 # Libraries --------------------------------------------------------------------
 library("stats")
+library("lme4")
 
 # Parameters -------------------------------------------------------------------
 set.seed(0)
 N_sims = 100 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
-cutoff = 120
+N_trials = 200 # Number of trial simulations to conduct
+cutoff = 114
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0, 0.1)
-N_assignment_mechanism_sets = 8
+assignment_mechanisms = c(0, 0, 0.1, 0.2)
+N_assignment_mechanism_sets = 100
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 0.5
 if (N_groups %% length(assignment_mechanisms) != 0) {
@@ -92,14 +93,24 @@ run_trial <- function(trial_num) {
       low_df$cond <- 0
       high_df$cond <- 1
       to_analyze <- rbind(low_df, high_df)
-      res.logistic <- glm(formula=status ~ factor(cond), family=binomial(link = "logit"), data=to_analyze)
-      pval_res <- c(pval_res, summary(res.logistic)[12]$coefficients[8])
-      if (summary(res.logistic)[12]$coefficients[8] < 0.05) {
+      # Get rid of those with a single outcome (either all the unvaccinated were infected, or all not infected)
+      to_delete <- c()
+      for (clus_num_f in unique(to_analyze$clus_num)) {
+        if (length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1) {
+          to_delete <- c(to_delete, which(to_analyze$clus_num == clus_num_f))
+        }
+      }
+      if (!is.null(to_delete)) {
+        to_analyze <- to_analyze[-to_delete,]
+      }
+      res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
+      pval_res <- c(pval_res, summary(res.logistic)[10]$coefficients[8])
+      if (summary(res.logistic)[10]$coefficients[8] < 0.05) {
         # Use predict function
         to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
         colnames(to_predict) <- c('cond')
         rownames(to_predict) <- c('low', 'high')
-        predicted <- predict(res.logistic, to_predict, type='response')
+        predicted <- predict(res.logistic, to_predict, type='response',re.form=NA)
         est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
         # Do bootstrap estimate
         bs_ests <- c()
@@ -108,11 +119,11 @@ run_trial <- function(trial_num) {
           bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
           bs_samp <- to_analyze[bs_indices,]
           # 2) run logistic and predict
-          res.logistic_bs <- glm(formula=status ~ factor(cond), family=binomial(link = "logit"), data=bs_samp)
+          res.logistic_bs <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
           to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
           colnames(to_predict) <- c('cond')
           rownames(to_predict) <- c('low', 'high')
-          predicted_bs <- predict(res.logistic_bs, to_predict, type='response')
+          predicted_bs <- predict(res.logistic_bs, to_predict, type='response', re.form=NA)
           bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
         }
         bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
@@ -147,6 +158,7 @@ final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
   library(foreach)
   library(doParallel)
+  library(lme4)
   res = run_trial(i)
   write.csv(res[[1]], paste0("~/netVax/scratch/", i, ".csv")) # for debugging purposes
   res

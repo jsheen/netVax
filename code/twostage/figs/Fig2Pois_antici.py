@@ -24,7 +24,7 @@ psi = 1 / 120
 mean_degree = 15
 nsim = 100
 cutoff = 120
-anticipatory = 0
+anticipatory = 30
 
 # Set parameters --------------------------------------------------------------
 param_set = [1000, 3, 1.1, 0.8, 0.1]
@@ -71,7 +71,6 @@ J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = beta_R0_vax)
 threshold = 1
 
 # Simulate epidemics with vaccination -------------------------------------
-final_sizes = []
 for sim in range(nsim):
     continue_loop = True
     while (continue_loop):
@@ -116,12 +115,12 @@ for sim in range(nsim):
     plt.xlim(0, cutoff + anticipatory)
     plt.ylim(-0.05, 1)
     plt.xlabel('Days after intervention', fontdict={'size':20})
-    plt.ylabel('Cumulative incidence', fontdict={'size':20})
+    plt.ylabel('Cumulative incidence\n& vaccination', fontdict={'size':20})
+    plt.axvline(x=anticipatory, color='red', linestyle='--')
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     # Control
     plt.plot(full_second_half_con.t() + t_first_half[-1], np.array(full_second_half_con.R()) / 1000, 'grey')
-    final_sizes.append(full_second_half_con.R()[-1])
     # Treatment (I among unvaccinated)
     R_unvax = []
     for t in range(cutoff):
@@ -131,6 +130,6 @@ for sim in range(nsim):
                 count += 1
         R_unvax.append(count)
     plt.plot(range(cutoff) + t_first_half[-1], np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
-plt.hist(final_sizes)
+
    
        

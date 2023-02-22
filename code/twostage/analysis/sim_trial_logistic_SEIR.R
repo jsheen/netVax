@@ -8,10 +8,10 @@ set.seed(0)
 N_sims = 100 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
 N_trials = 200 # Number of trial simulations to conduct
-cutoff = 120
+cutoff = 114
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0)
-N_assignment_mechanism_sets = 20
+assignment_mechanisms = c(0, 0, 0.1, 0.2)
+N_assignment_mechanism_sets = 18
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
@@ -58,9 +58,6 @@ run_trial <- function(trial_num) {
       cluster_df <- trial_dfs[[trial_df_dex]]
       if (cluster_df$node[1] == 'na') {
         stop('Error in enrolled cluster')
-      } else if (length(unique(cluster_df$time2inf_trt)) == 1) {
-        write.csv(NA, paste('~/netVax/scratch/test.csv', trial_num))
-        # do nothing
       } else {
         # The following is to get the true effect
         denom_to_add <- length(which(cluster_df$assignment == 'na'))
@@ -96,6 +93,16 @@ run_trial <- function(trial_num) {
       low_df$cond <- 0
       high_df$cond <- 1
       to_analyze <- rbind(low_df, high_df)
+      # Get rid of those with a single outcome (either all the unvaccinated were infected, or all not infected)
+      to_delete <- c()
+      for (clus_num_f in unique(to_analyze$clus_num)) {
+        if (length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1) {
+          to_delete <- c(to_delete, which(to_analyze$clus_num == clus_num_f))
+        }
+      }
+      if (!is.null(to_delete)) {
+        to_analyze <- to_analyze[-to_delete,]
+      }
       res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
       pval_res <- c(pval_res, summary(res.logistic)[10]$coefficients[8])
       if (summary(res.logistic)[10]$coefficients[8] < 0.05) {
@@ -107,18 +114,18 @@ run_trial <- function(trial_num) {
         est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
         # Do bootstrap estimate
         bs_ests <- c()
-        # for (iter in 1:num_bootstrap_sample) {
-        #   # 1) construct bootstrap sample:
-        #   bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
-        #   bs_samp <- to_analyze[bs_indices,]
-        #   # 2) run logistic and predict
-        #   res.logistic_bs <- glmer(formula=status ~ factor(cond) | (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
-        #   to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-        #   colnames(to_predict) <- c('cond')
-        #   rownames(to_predict) <- c('low', 'high')
-        #   predicted_bs <- predict(res.logistic_bs, to_predict, type='response')
-        #   bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
-        # }
+        for (iter in 1:num_bootstrap_sample) {
+          # 1) construct bootstrap sample:
+          bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
+          bs_samp <- to_analyze[bs_indices,]
+          # 2) run logistic and predict
+          res.logistic_bs <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
+          to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
+          colnames(to_predict) <- c('cond')
+          rownames(to_predict) <- c('low', 'high')
+          predicted_bs <- predict(res.logistic_bs, to_predict, type='response', re.form=NA)
+          bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
+        }
         bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
       } else {
         est_eff_res <- c(est_eff_res, NA)

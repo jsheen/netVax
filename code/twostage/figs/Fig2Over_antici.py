@@ -21,7 +21,7 @@ home = str(Path.home())
 sigma = 1 / 5
 gamma = 1 / 10
 psi = 1 / 120
-nsim = 20
+nsim = 50
 cutoff = 150
 anticipatory = 30
 
@@ -116,8 +116,9 @@ for sim in range(nsim):
     plt.plot(full_second_half_trt.t() + t_first_half[-1], full_second_half_trt.summary()[1]['V_R'] / 1000, 'blue')
     plt.xlim(0, cutoff + anticipatory)
     plt.ylim(-0.05, 1)
-    plt.xlabel('Days after intervention', fontdict={'size':20})
-    plt.ylabel('Cumulative incidence', fontdict={'size':20})
+    plt.xlabel('Days after vaccination', fontdict={'size':20})
+    plt.ylabel('Cumulative incidence\n& vaccination', fontdict={'size':20})
+    plt.axvline(x=anticipatory, color='red', linestyle='--')
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     # Control
