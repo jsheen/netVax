@@ -5,18 +5,19 @@ library("lme4")
 
 # Parameters -------------------------------------------------------------------
 set.seed(0)
-N_sims = 100 # Total number of cluster simulations in simulation bank
+N_sims = 1000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 200 # Number of trial simulations to conduct
-cutoff = 114
+N_trials = 500 # Number of trial simulations to conduct
+cutoff = 120
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0, 0.1, 0.2)
-N_assignment_mechanism_sets = 18
+assignment_mechanisms = c(0, 0.1)
+N_assignment_mechanism_sets = 19
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
+threshold_inclusion = 3
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -28,6 +29,9 @@ for (assignment_mechanism in assignment_mechanisms) {
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
+  }
+  if (length(to_use) != N_sims) {
+    stop('Should use all sims.')
   }
   to_use_ls[[to_use_ls_dex]] <- to_use
   to_use_ls_dex <- to_use_ls_dex + 1
@@ -95,47 +99,61 @@ run_trial <- function(trial_num) {
       to_analyze <- rbind(low_df, high_df)
       # Get rid of those with a single outcome (either all the unvaccinated were infected, or all not infected)
       to_delete <- c()
+      clus_num_f_cnt <- 0
+      clus_num_f_cont_cnt <- 0
       for (clus_num_f in unique(to_analyze$clus_num)) {
-        if (length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1) {
+        if (length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1 | 
+            length(which(to_analyze$clus_num == clus_num_f & to_analyze$status == 1)) < threshold_inclusion) {
           to_delete <- c(to_delete, which(to_analyze$clus_num == clus_num_f))
+          clus_num_f_cnt <- clus_num_f_cnt + 1
+          if (to_analyze[which(to_analyze$clus_num == clus_num_f),]$cond[1] == 0) {
+            clus_num_f_cont_cnt <- clus_num_f_cont_cnt + 1
+          }
         }
       }
       if (!is.null(to_delete)) {
         to_analyze <- to_analyze[-to_delete,]
       }
-      res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
-      pval_res <- c(pval_res, summary(res.logistic)[10]$coefficients[8])
-      if (summary(res.logistic)[10]$coefficients[8] < 0.05) {
-        # Use predict function
-        to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-        colnames(to_predict) <- c('cond')
-        rownames(to_predict) <- c('low', 'high')
-        predicted <- predict(res.logistic, to_predict, type='response',re.form=NA)
-        est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
-        # Do bootstrap estimate
-        bs_ests <- c()
-        for (iter in 1:num_bootstrap_sample) {
-          # 1) construct bootstrap sample:
-          bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
-          bs_samp <- to_analyze[bs_indices,]
-          # 2) run logistic and predict
-          res.logistic_bs <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
+      if (length(which(to_analyze$assignment_mech == 1)) < 101 | length(which(to_analyze$assignment_mech == 2)) < 101) { # make sure contrast error does not come up. think it needs at least two clusters per arm for the contrast.
+        pval_res <- c(pval_res, NA)
+        est_eff_res <- c(est_eff_res, NA)
+        bs_est_eff_res <- c(bs_est_eff_res, NA)
+      } else {
+        res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
+        pval_res <- c(pval_res, summary(res.logistic)[10]$coefficients[8])
+        if (summary(res.logistic)[10]$coefficients[8] < 0.05) {
+          # Use predict function
           to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
           colnames(to_predict) <- c('cond')
           rownames(to_predict) <- c('low', 'high')
-          predicted_bs <- predict(res.logistic_bs, to_predict, type='response', re.form=NA)
-          bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
+          predicted <- predict(res.logistic, to_predict, type='response',re.form=NA)
+          est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
+          # Do bootstrap estimate
+          bs_ests <- c()
+          for (iter in 1:num_bootstrap_sample) {
+            # 1) construct bootstrap sample:
+            bs_indices <- sample(1:nrow(to_analyze), nrow(to_analyze), replace=TRUE)
+            bs_samp <- to_analyze[bs_indices,]
+            # 2) run logistic and predict
+            res.logistic_bs <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
+            to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
+            colnames(to_predict) <- c('cond')
+            rownames(to_predict) <- c('low', 'high')
+            predicted_bs <- predict(res.logistic_bs, to_predict, type='response', re.form=NA)
+            bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
+          }
+          bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
+        } else {
+          est_eff_res <- c(est_eff_res, NA)
+          bs_est_eff_res <- c(bs_est_eff_res, NA)
         }
-        bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
-      } else {
-        est_eff_res <- c(est_eff_res, NA)
-        bs_est_eff_res <- c(bs_est_eff_res, NA)
       }
     } else {
       est_eff_res <- c(est_eff_res, NA)
       pval_res <- c(pval_res, NA)
     }
   }
+  write.csv(c(clus_num_f_cnt / N_groups, (clus_num_f_cont_cnt / N_groups) / 2), paste0('~/netVax/scratch/', trial_num, '_overreactionary.csv'))
   # Code to get true ASE effect (temp_df)
   ave_cluster_average <- sum_cluster_average / N_assignment_mechanism_sets
   temp_df <- data.frame(matrix(ave_cluster_average[1:length(ave_cluster_average) - 1] - ave_cluster_average[2:length(ave_cluster_average)], nrow=1, ncol=length(ave_cluster_average) - 1))
@@ -160,7 +178,7 @@ final <- foreach(i=1:N_trials) %dopar% {
   library(doParallel)
   library(lme4)
   res = run_trial(i)
-  write.csv(res[[1]], paste0("~/netVax/scratch/", i, ".csv")) # for debugging purposes
+  #write.csv(res[[1]], paste0("~/netVax/scratch/", i, ".csv")) # for debugging purposes
   res
 }
 stopCluster(cl)

@@ -1,8 +1,8 @@
 node, assignment, time2inf_trt
 0,na,1000
 1,na,1000
-2,na,0
-3,na,0
+2,na,1000
+3,na,1000
 4,na,1000
 5,na,1000
 6,na,1000
@@ -503,7 +503,7 @@ node, assignment, time2inf_trt
 501,na,1000
 502,na,1000
 503,na,1000
-504,na,12.36428906863864
+504,na,1000
 505,na,1000
 506,na,1000
 507,na,1000

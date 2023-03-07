@@ -33,7 +33,7 @@ R0_wts = [3]
 vaxs = [0.5, 0.9, 1.1]
 vax_effs = [0.8]
 assigns = [0, 0.1, 0.2]
-sim_num = 100
+sim_num = 1000
 param_sets = []
 for i in Ns:
     for j in R0_wts:

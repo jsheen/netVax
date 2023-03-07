@@ -31,10 +31,10 @@ anticipatory = 30
 Ns = [1000]
 overdispersions = [1]
 R0_wts = [3]
-vaxs = [0.5, 0.9, 1.1]
+vaxs = [0.5]
 vax_effs = [0.8]
-assigns = [0, 0.1, 0.2]
-sim_num = 100
+assigns = [0, 0.1]
+sim_num = 3000
 param_sets = []
 for i in Ns:
     for j in overdispersions:
@@ -145,7 +145,6 @@ def runSim(param_set):
             out_f.write(',')
             out_f.write(str(surv_inf_trt.get(node)))
             out_f.write('\n')
-
 
 if __name__ == '__main__':
     pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
