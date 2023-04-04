@@ -31,10 +31,10 @@ anticipatory = 30
 Ns = [1000]
 overdispersions = [1]
 R0_wts = [3]
-vaxs = [0.5]
-vax_effs = [0.8]
+vaxs = [0, 0.5, 0.9, 1.1]
+vax_effs = [1]
 assigns = [0, 0.1]
-sim_num = 3000
+sim_num = 2000
 param_sets = []
 for i in Ns:
     for j in overdispersions:
@@ -147,7 +147,7 @@ def runSim(param_set):
             out_f.write('\n')
 
 if __name__ == '__main__':
-    pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
+    pool = mp.Pool(3)#mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(runSim, param_sets)
     pool.close()
     pool.join()

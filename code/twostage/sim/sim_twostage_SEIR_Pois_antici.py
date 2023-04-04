@@ -30,10 +30,10 @@ anticipatory = 30
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 R0_wts = [3]
-vaxs = [0.5, 0.9, 1.1]
-vax_effs = [0.8]
-assigns = [0, 0.1, 0.2]
-sim_num = 1000
+vaxs = [0, 0.5, 0.9, 1.1]
+vax_effs = [1]
+assigns = [0, 0.1]
+sim_num = 2000
 param_sets = []
 for i in Ns:
     for j in R0_wts:
@@ -144,7 +144,7 @@ def runSim(param_set):
 
 
 if __name__ == '__main__':
-    pool = mp.Pool(mp.cpu_count() - 1) # Don't use all CPUs
+    pool = mp.Pool(3)#mp.cpu_count() - 1) # Don't use all CPUs
     pool.map(runSim, param_sets)
     pool.close()
     pool.join()
