@@ -5,19 +5,19 @@ library("lme4")
 
 # Parameters -------------------------------------------------------------------
 set.seed(0)
-N_sims = 1000 # Total number of cluster simulations in simulation bank
-N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
+N_sims = 2000 # Total number of cluster simulations in simulation bank
+N_sample = 100 # Number of previously unvaccinated individuals sampled from each cluster
+N_trials = 2000 # Number of trial simulations to conduct
 cutoff = 120
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 15
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 2
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.5
+R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 0
+threshold_inclusion = 3
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -25,7 +25,7 @@ to_use_ls_dex <- 1
 for (assignment_mechanism in assignment_mechanisms) {
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff0.8_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_antici.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_antici.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -48,12 +48,13 @@ run_trial <- function(trial_num) {
   clusters_to_use_dex <- 1
   trial_dfs <- list()
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff0.8_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
   # First, calculate percent infected within each cluster of different assignment
   sum_cluster_average <- rep(0, length(assignment_mechanisms))
+  number_cluster_average <- rep(0, length(assignment_mechanisms))
   sampled_ls <- list()
   for (assignment_mech_dex in 1:length(assignment_mechanisms)) {
     assignment_mech_ls <- list()
@@ -62,12 +63,15 @@ run_trial <- function(trial_num) {
       cluster_df <- trial_dfs[[trial_df_dex]]
       if (cluster_df$node[1] == 'na') {
         stop('Error in enrolled cluster')
+      } else if (length(which(cluster_df$assignment == 'na' & cluster_df$time2inf_trt < cutoff)) < threshold_inclusion) {
+        # do nothing
       } else {
-        # The following is to get the true effect
+        # The following is to get the unbiased estimator
         denom_to_add <- length(which(cluster_df$assignment == 'na'))
         num_to_add <- length(which(cluster_df$assignment == 'na' & cluster_df$time2inf_trt < cutoff))
         cluster_average <- num_to_add / denom_to_add
         sum_cluster_average[assignment_mech_dex] <- sum_cluster_average[assignment_mech_dex] + cluster_average
+        number_cluster_average[assignment_mech_dex] <- number_cluster_average[assignment_mech_dex] + 1
         # The following is prepare the dataframe for the logistic analysis
         mod_cluster_df <- cluster_df
         mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),]
@@ -97,7 +101,7 @@ run_trial <- function(trial_num) {
       low_df$cond <- 0
       high_df$cond <- 1
       to_analyze <- rbind(low_df, high_df)
-      # Get rid of those with a single outcome (either all the unvaccinated were infected, or all not infected)
+      # Get rid of those with less than threshold_inclusion number of infections (either all the unvaccinated were infected, or all not infected)
       to_delete <- c()
       clus_num_f_cnt <- 0
       clus_num_f_cont_cnt <- 0
@@ -114,7 +118,7 @@ run_trial <- function(trial_num) {
       if (!is.null(to_delete)) {
         to_analyze <- to_analyze[-to_delete,]
       }
-      if (length(which(to_analyze$assignment_mech == 1)) < 101 | length(which(to_analyze$assignment_mech == 2)) < 101) { # make sure contrast error does not come up
+      if (length(which(to_analyze$assignment_mech == 1)) < 101 | length(which(to_analyze$assignment_mech == 2)) < 101) { # make sure contrast error does not come up, which comes up when there is one or less clusters per arm
         pval_res <- c(pval_res, NA)
         est_eff_res <- c(est_eff_res, NA)
         bs_est_eff_res <- c(bs_est_eff_res, NA)
@@ -155,7 +159,7 @@ run_trial <- function(trial_num) {
   }
   write.csv(c(clus_num_f_cnt / N_groups, (clus_num_f_cont_cnt / N_groups) / 2), paste0('~/netVax/scratch/', trial_num, '_overanticipatory.csv'))
   # Code to get true ASE effect (temp_df)
-  ave_cluster_average <- sum_cluster_average / N_assignment_mechanism_sets
+  ave_cluster_average <- sum_cluster_average / number_cluster_average
   temp_df <- data.frame(matrix(ave_cluster_average[1:length(ave_cluster_average) - 1] - ave_cluster_average[2:length(ave_cluster_average)], nrow=1, ncol=length(ave_cluster_average) - 1))
   # Code to store the true effect (est_eff_res) the bootstraps (bs_est_eff_res) and the p_values (p_val_res) and true ASE effect (temp_df)
   to_return_ls = list(data.frame(matrix(est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
