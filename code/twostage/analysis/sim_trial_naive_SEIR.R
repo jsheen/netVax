@@ -1,15 +1,17 @@
 # Script used to simulate two-stage trials -------------------------------------
 # Libraries --------------------------------------------------------------------
 library("stats")
-library("lme4")
+library("RcppAlgos")
 
 # Parameters -------------------------------------------------------------------
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
 N_trials = 1000 # Number of trial simulations to conduct
+n_perm = 1000
 cutoff = 120
-num_bootstrap_sample = 100
+alpha = 0.025
+num_bootstrap_sample = 10
 assignment_mechanisms = c(0, 0.1)
 N_assignment_mechanism_sets = 2
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
@@ -39,6 +41,9 @@ for (assignment_mechanism in assignment_mechanisms) {
 
 # Function to run trial simulation ---------------------------------------------
 run_trial <- function(trial_num) {
+  if (trial_num %% 100 == 0) {
+    write.csv(c('test'), paste0('~/netVax/scratch/overreactionary_', trial_num, '.csv'))
+  }
   clusters_to_use <- c()
   for (assignment_mechanism_dex in 1:length(assignment_mechanisms)) {
     clusters_to_use <- c(clusters_to_use, sample(to_use_ls[[assignment_mechanism_dex]], N_assignment_mechanism_sets))
@@ -68,7 +73,7 @@ run_trial <- function(trial_num) {
         num_to_add <- length(which(cluster_df$assignment == 'na' & cluster_df$time2inf_trt < cutoff))
         cluster_average <- num_to_add / denom_to_add
         sum_cluster_average[assignment_mech_dex] <- sum_cluster_average[assignment_mech_dex] + cluster_average
-        # The following is prepare the dataframe for the logistic analysis
+        # The following is prepare the dataframe for the naive analysis
         mod_cluster_df <- cluster_df
         mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),]
         mod_cluster_df$assignment_mech <- assignment_mech_dex
@@ -114,25 +119,46 @@ run_trial <- function(trial_num) {
       if (!is.null(to_delete)) {
         to_analyze <- to_analyze[-to_delete,]
       }
-      if (length(which(to_analyze$assignment_mech == 1)) < 101 | length(which(to_analyze$assignment_mech == 2)) < 101) { # make sure contrast error does not come up. think it needs at least two clusters per arm for the contrast.
+      if (length(which(to_analyze$assignment_mech == 1)) < 1 | length(which(to_analyze$assignment_mech == 2)) < 1) {
         pval_res <- c(pval_res, NA)
         est_eff_res <- c(est_eff_res, NA)
         bs_est_eff_res <- c(bs_est_eff_res, NA)
       } else {
-        res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
-        pval <- summary(res.logistic)[10]$coefficients[8]
-        pval_res <- c(pval_res, pval)
-        if (pval < 0.05) {
-          # Use predict function
-          to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-          colnames(to_predict) <- c('cond')
-          rownames(to_predict) <- c('low', 'high')
-          predicted <- predict(res.logistic, to_predict, type='response',re.form=NA)
-          if (length(unique(predicted)) != 2) {
-            stop(unique(predicted))
-            #stop('Error in number of predicted values.')
+        # Calculate naive estimate
+        calc_est <- function(to_analyze) {
+          conts <- c()
+          treats <- c()
+          for (f_clus_num in unique(to_analyze$clus_num)) {
+            res <- length(which(to_analyze$status == 1 & to_analyze$clus_num == f_clus_num)) / length(which(to_analyze$clus_num == f_clus_num))
+            if (to_analyze$cond[which(to_analyze$clus_num == f_clus_num)][1] == 0) { # Check if cluster is control or treatment
+              conts <- c(conts, res)
+            } else {
+              treats <- c(treats, res)
+            }
           }
-          est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
+          return(mean(conts) - mean(treats))
+        }
+        est <- calc_est(to_analyze)
+        # Permutation test for p-value
+        outcomes <- to_analyze$status
+        N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
+        N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
+        perms_hist <- c()
+        for (perm_dex in 1:n_perm) {
+          temp_to_analyze <- to_analyze
+          clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
+          count_clus <- 1
+          for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+            clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
+            temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
+            count_clus <- count_clus + 1
+          }
+          perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+        }
+        pval <- (1 - ecdf(perms_hist)(est)) # should be like 66%, not 100%
+        pval_res <- c(pval_res, pval)
+        if (pval < alpha) {
+          est_eff_res <- c(est_eff_res, est)
           # Do bootstrap estimate
           bs_ests <- c()
           for (iter in 1:num_bootstrap_sample) {
@@ -148,30 +174,18 @@ run_trial <- function(trial_num) {
               if (nrow(control_to_analyze) %% 100 != 0 | nrow(treated_to_analyze) %% 100 != 0) {
                 stop('Error in number of observations in either treatment or control.')
               }
-              for (index1 in 1:N_clus_control) {
-                clus_samp <- control_to_analyze[which(control_to_analyze$clus_num == sample(unique(control_to_analyze$clus_num), 1), 1),]
-                # First, get of the infecteds, randomly sample at least the number of threshold inclusion
-                infecteds_clus_samp <- which(clus_samp$status == 1)
-                if (length(infecteds_clus_samp) < threshold_inclusion) {
-                  stop('Error in threshold inclusion for bootstrap.')
-                }
-                not_infecteds_clus_samp <- which(clus_samp$status == 0)
-                chosen_infecteds_clus_samp <- sample(infecteds_clus_samp, threshold_inclusion, replace=TRUE) # A little iffy here... since first we sample among infecteds, then everyone else #FIX THIS PUT IN A STOP IF TOO LONG SEARCH
-                rest_bs_indices <- sample(1:nrow(clus_samp), nrow(clus_samp) - threshold_inclusion, replace = TRUE) # Randomly choose the rest of the indices
-                bs_samp_ls[[bs_samp_ls_dex]] <- clus_samp[c(chosen_infecteds_clus_samp, rest_bs_indices),]
+              sampled_controls <- sample(unique(control_to_analyze$clus_num), N_clus_control, replace=TRUE)
+              for (sampled_control in sampled_controls) {
+                clus_samp <- control_to_analyze[which(control_to_analyze$clus_num == sampled_control),]
+                bs_indices <- sample(1:nrow(clus_samp), nrow(clus_samp), replace = TRUE)
+                bs_samp_ls[[bs_samp_ls_dex]] <- clus_samp[bs_indices,]
                 bs_samp_ls_dex <- bs_samp_ls_dex + 1
               }
-              for (index2 in 1:N_clus_treated) {
-                clus_samp <- treated_to_analyze[which(treated_to_analyze$clus_num == sample(unique(treated_to_analyze$clus_num), 1), 1),]
-                # First, get of the infecteds, randomly sample at least the number of threshold inclusion
-                infecteds_clus_samp <- which(clus_samp$status == 1)
-                if (length(infecteds_clus_samp) < threshold_inclusion) {
-                  stop('Error in threshold inclusion for bootstrap.')
-                }
-                not_infecteds_clus_samp <- which(clus_samp$status == 0)
-                chosen_infecteds_clus_samp <- sample(infecteds_clus_samp, threshold_inclusion, replace=TRUE) # A little iffy here... since first we sample among infecteds, then everyone else #FIX THIS PUT IN A STOP IF TOO LONG SEARCH
-                rest_bs_indices <- sample(1:nrow(clus_samp), nrow(clus_samp) - threshold_inclusion, replace = TRUE) # Randomly choose the rest of the indices
-                bs_samp_ls[[bs_samp_ls_dex]] <- clus_samp[c(chosen_infecteds_clus_samp, rest_bs_indices),]
+              sampled_treats <- sample(unique(treated_to_analyze$clus_num), N_clus_treated, replace=TRUE)
+              for (sampled_treat in sampled_treats) {
+                clus_samp <- treated_to_analyze[which(treated_to_analyze$clus_num == sampled_treat),]
+                bs_indices <- sample(1:nrow(clus_samp), nrow(clus_samp), replace = TRUE)
+                bs_samp_ls[[bs_samp_ls_dex]] <- clus_samp[bs_indices,]
                 bs_samp_ls_dex <- bs_samp_ls_dex + 1
               }
               bs_samp <- do.call(rbind, bs_samp_ls)
@@ -180,26 +194,16 @@ run_trial <- function(trial_num) {
                 stop('Error in creating bootstrap. (1)')
               }
               if (length(unique(bs_samp$cond)) == 2) {# & 
-                  #length(which(bs_samp$status == 1 & bs_samp$cond == 0)) / length(which(bs_samp$cond == 0)) != length(which(bs_samp$status == 1 & bs_samp$cond == 1)) / length(which(bs_samp$cond == 1))) { 
+                #length(which(bs_samp$status == 1 & bs_samp$cond == 0)) / length(which(bs_samp$cond == 0)) != length(which(bs_samp$status == 1 & bs_samp$cond == 1)) / length(which(bs_samp$cond == 1))) { 
                 passed <- TRUE
               } else if (length(unique(bs_samp$cond)) > 2) {
                 stop('Error in creating bootstrap. (2)')
               }
             }
-            # 2) run logistic and predict
-            res.logistic_bs <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
-            bs_pval <- summary(res.logistic_bs)[10]$coefficients[8]
-            if (bs_pval < 0.05) {
-              to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-              colnames(to_predict) <- c('cond')
-              rownames(to_predict) <- c('low', 'high')
-              predicted_bs <- predict(res.logistic_bs, to_predict, type='response', re.form=NA)
-              if (length(unique(predicted_bs)) != 2) {
-                stop(unique(predicted_bs))
-                #stop('Error in number of predicted values.')
-              }
-              bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
-            }
+            # 2) run naive
+            # Calculate naive estimate
+            bs_est <- calc_est(bs_samp)
+            bs_ests <- c(bs_ests, bs_est)
           }
           bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
         } else {
@@ -208,11 +212,11 @@ run_trial <- function(trial_num) {
         }
       }
     } else {
+      write.csv(c('err'), paste0('~/netVax/scratch/err_overreactionary_', trial_num, '.csv'))
       est_eff_res <- c(est_eff_res, NA)
       pval_res <- c(pval_res, NA)
     }
   }
-  write.csv(c(clus_num_f_cnt / N_groups, (clus_num_f_cont_cnt / N_groups) / 2), paste0('~/netVax/scratch/', trial_num, '_overreactionary_tes.csv'))
   # Code to get true ASE effect (temp_df)
   ave_cluster_average <- sum_cluster_average / N_assignment_mechanism_sets
   temp_df <- data.frame(matrix(ave_cluster_average[1:length(ave_cluster_average) - 1] - ave_cluster_average[2:length(ave_cluster_average)], nrow=1, ncol=length(ave_cluster_average) - 1))
@@ -235,15 +239,15 @@ final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
   library(foreach)
   library(doParallel)
-  library(lme4)
+  library(RcppAlgos)
   res = run_trial(i)
   res
 }
 stopCluster(cl)
-save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR.RData"))
+save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR_naive.RData"))
 
 # Load results -----------------------------------------------------------------
-load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR.RData"))
+load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR_naive.RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()
@@ -270,10 +274,10 @@ for (col_dex in 1:ncol(final_est_eff_res_df)) {
   print(paste0('Mean of the width of the 95% bootstrap CI: ', mean(final_bs_est_eff_res_df[,col_dex] * 100, na.rm=T)))
 }
 
-# Q2) What is the power to detect an effect under this trial design using the logistic model?
+# Q2) What is the power to detect an effect under this trial design using the naive model?
 for (col_dex in 1:ncol(final_pval_res_df)) {
   print(paste0('Power: Reduced incidence of treatment assignment from:', assignment_mechanisms[col_dex],' to: ', assignment_mechanisms[col_dex + 1]))
-  print(length(which(final_pval_res_df[,col_dex] < 0.05)) / length(which(!is.na(final_pval_res_df[,col_dex]))))
+  print(length(which(final_pval_res_df[,col_dex] < alpha)) / N_trials)
 }
 
 # Q3) What is the true effect across groups (mean and variance)?

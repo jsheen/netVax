@@ -1,17 +1,17 @@
 # Script used to simulate two-stage trials -------------------------------------
 # Libraries --------------------------------------------------------------------
 library("stats")
-library("lme4")
+library("gee")
 
 # Parameters -------------------------------------------------------------------
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
+N_trials = 2000 # Number of trial simulations to conduct
 cutoff = 120
-num_bootstrap_sample = 100
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 2
+num_bootstrap_sample = 1
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 10
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
@@ -119,20 +119,22 @@ run_trial <- function(trial_num) {
         est_eff_res <- c(est_eff_res, NA)
         bs_est_eff_res <- c(bs_est_eff_res, NA)
       } else {
-        res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
-        pval <- summary(res.logistic)[10]$coefficients[8]
-        pval_res <- c(pval_res, pval)
-        if (pval < 0.05) {
+        res.gee <- gee(status ~ cond,
+                       data = to_analyze, 
+                       id = node, 
+                       family = binomial,
+                       corstr = "independence")
+        #res.logistic <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=to_analyze)
+        gee_pval <- pnorm(q=summary(res.gee)[7]$coefficients[10], lower.tail=TRUE)
+        pval_res <- c(pval_res, gee_pval)
+        if (gee_pval < 0.05) {
           # Use predict function
-          to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-          colnames(to_predict) <- c('cond')
-          rownames(to_predict) <- c('low', 'high')
-          predicted <- predict(res.logistic, to_predict, type='response',re.form=NA)
+          predicted <- unique(predict(res.gee, type='response',re.form=NA))
           if (length(unique(predicted)) != 2) {
             stop(unique(predicted))
             #stop('Error in number of predicted values.')
           }
-          est_eff_res <- c(est_eff_res, unname(predicted[1] - predicted[2]))
+          est_eff_res <- c(est_eff_res, predicted[1] - predicted[2])
           # Do bootstrap estimate
           bs_ests <- c()
           for (iter in 1:num_bootstrap_sample) {
@@ -179,27 +181,26 @@ run_trial <- function(trial_num) {
               if (nrow(bs_samp) != nrow(to_analyze)) {
                 stop('Error in creating bootstrap. (1)')
               }
-              if (length(unique(bs_samp$cond)) == 2) {# & 
-                  #length(which(bs_samp$status == 1 & bs_samp$cond == 0)) / length(which(bs_samp$cond == 0)) != length(which(bs_samp$status == 1 & bs_samp$cond == 1)) / length(which(bs_samp$cond == 1))) { 
+              if (length(unique(bs_samp$cond)) == 2 & 
+                  length(which(bs_samp$cond == 0)) >= 1 & length(which(bs_samp$cond == 1)) >= 1 & # at least one of each condition
+                  length(which(bs_samp$status == 1 & bs_samp$cond == 0)) / length(which(bs_samp$cond == 0)) != length(which(bs_samp$status == 1 & bs_samp$cond == 1)) / length(which(bs_samp$cond == 1))) { 
                 passed <- TRUE
               } else if (length(unique(bs_samp$cond)) > 2) {
                 stop('Error in creating bootstrap. (2)')
               }
             }
-            # 2) run logistic and predict
-            res.logistic_bs <- glmer(formula=status ~ factor(cond) + (1|clus_num), family=binomial(link = "logit"), data=bs_samp)
-            bs_pval <- summary(res.logistic_bs)[10]$coefficients[8]
-            if (bs_pval < 0.05) {
-              to_predict <- data.frame(matrix(c(0, 1), nrow=2, ncol=1))
-              colnames(to_predict) <- c('cond')
-              rownames(to_predict) <- c('low', 'high')
-              predicted_bs <- predict(res.logistic_bs, to_predict, type='response', re.form=NA)
-              if (length(unique(predicted_bs)) != 2) {
-                stop(unique(predicted_bs))
-                #stop('Error in number of predicted values.')
-              }
-              bs_ests <- c(bs_ests, unname(predicted_bs[1] - predicted_bs[2]))
+            # 2) run gee and predict
+            res.gee.bs <- gee(status ~ factor(cond),
+                              data = bs_samp,
+                              id = node,
+                              family = binomial,
+                              corstr = "independence")
+            predicted_bs <- unique(predict(res.gee.bs, type='response', re.form=NA))
+            if (length(unique(predicted_bs)) != 2) {
+              stop(unique(predicted_bs))
+              #stop('Error in number of predicted values.')
             }
+            bs_ests <- c(bs_ests, predicted_bs[1] - predicted_bs[2])
           }
           bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
         } else {
@@ -235,15 +236,15 @@ final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
   library(foreach)
   library(doParallel)
-  library(lme4)
+  library(gee)
   res = run_trial(i)
   res
 }
 stopCluster(cl)
-save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR.RData"))
+save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR_gee.RData"))
 
 # Load results -----------------------------------------------------------------
-load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR.RData"))
+load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR_gee.RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()
