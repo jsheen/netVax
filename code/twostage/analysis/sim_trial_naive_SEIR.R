@@ -10,12 +10,12 @@ N_sample = 100 # Number sampled from each cluster
 N_trials = 1000 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 120
-alpha = 0.025
-num_bootstrap_sample = 10
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 2
+alpha = 0.05
+num_bootstrap_sample = 1
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 30
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 1.1
+R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -155,7 +155,7 @@ run_trial <- function(trial_num) {
           }
           perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
         }
-        pval <- (1 - ecdf(perms_hist)(est)) # should be like 66%, not 100%
+        pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         pval_res <- c(pval_res, pval)
         if (pval < alpha) {
           est_eff_res <- c(est_eff_res, est)
