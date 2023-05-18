@@ -244,10 +244,10 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
-save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR_naive_antici.RData"))
+save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,".RData"))
 
 # Load results -----------------------------------------------------------------
-load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_SEIR_naive_antici.RData"))
+load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,".RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()
