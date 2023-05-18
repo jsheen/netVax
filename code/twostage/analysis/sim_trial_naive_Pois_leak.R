@@ -27,7 +27,7 @@ to_use_ls_dex <- 1
 for (assignment_mechanism in assignment_mechanisms) {
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_Pois.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff0.8_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_Pois.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -53,7 +53,7 @@ run_trial <- function(trial_num) {
   clusters_to_use_dex <- 1
   trial_dfs <- list()
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff0.8_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
@@ -143,19 +143,38 @@ run_trial <- function(trial_num) {
         outcomes <- to_analyze$status
         N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
         N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
-        perms_hist <- c()
-        for (perm_dex in 1:n_perm) {
-          temp_to_analyze <- to_analyze
-          clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
-          count_clus <- 1
-          for (f_clus_num in unique(temp_to_analyze$clus_num)) {
-            clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
-            temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
-            count_clus <- count_clus + 1
+        if (N_clus_c_perm + N_clus_t_perm <= 12) {
+          # Calculate all permutations since under 1000
+          perms_hist <- c()
+          perms <- permutations(n = N_clus_c_perm + N_clus_t_perm, 
+                                r = N_clus_c_perm + N_clus_t_perm, 
+                                v = c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm))
+                                for (perm in perms) {
+                                  temp_to_analyze <- to_analyze
+                                  count_clus <- 1
+                                  for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+                                    clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
+                                    temp_to_analyze$cond[clus_dex] <- rep(perms[count_clus], length(clus_dex))
+                                    count_clus <- count_clus + 1
+                                  }
+                                  perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+                                }
+                                pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
+        } else {
+          perms_hist <- c()
+          for (perm_dex in 1:n_perm) {
+            temp_to_analyze <- to_analyze
+            clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
+            count_clus <- 1
+            for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+              clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
+              temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
+              count_clus <- count_clus + 1
+            }
+            perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
           }
-          perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+          pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         }
-        pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         pval_res <- c(pval_res, pval)
         if (pval < alpha) {
           est_eff_res <- c(est_eff_res, est)
@@ -244,10 +263,10 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
-save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,".RData"))
+save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_leak_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,".RData"))
 
 # Load results -----------------------------------------------------------------
-load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,".RData"))
+load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_leak_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,".RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()
