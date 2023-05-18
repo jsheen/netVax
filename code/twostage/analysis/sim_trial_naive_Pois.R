@@ -27,7 +27,7 @@ to_use_ls_dex <- 1
 for (assignment_mechanism in assignment_mechanisms) {
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_Pois.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_Pois.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -53,7 +53,7 @@ run_trial <- function(trial_num) {
   clusters_to_use_dex <- 1
   trial_dfs <- list()
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
