@@ -12,10 +12,10 @@ n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1000
-assignment_mechanisms = c(0, 0)
-N_assignment_mechanism_sets = 5
+assignment_mechanisms = c(0, 0.1)
+N_assignment_mechanism_sets = 4
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.5
+R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -143,38 +143,23 @@ run_trial <- function(trial_num) {
         outcomes <- to_analyze$status
         N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
         N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
-        if (N_clus_c_perm + N_clus_t_perm <= 12) {
-          # Calculate all permutations since under 1000
-          perms_hist <- c()
-          perms <- permutations(n = N_clus_c_perm + N_clus_t_perm, 
-                                r = N_clus_c_perm + N_clus_t_perm, 
-                                v = c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm))
-                                for (perm in perms) {
-                                  temp_to_analyze <- to_analyze
-                                  count_clus <- 1
-                                  for (f_clus_num in unique(temp_to_analyze$clus_num)) {
-                                    clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
-                                    temp_to_analyze$cond[clus_dex] <- rep(perms[count_clus], length(clus_dex))
-                                    count_clus <- count_clus + 1
-                                  }
-                                  perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
-                                }
-                                pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
-        } else {
-          perms_hist <- c()
-          for (perm_dex in 1:n_perm) {
-            temp_to_analyze <- to_analyze
-            clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
-            count_clus <- 1
-            for (f_clus_num in unique(temp_to_analyze$clus_num)) {
-              clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
-              temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
-              count_clus <- count_clus + 1
-            }
-            perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+        perms_hist <- c()
+        for (perm_dex in 1:n_perm) {
+          temp_to_analyze <- to_analyze
+          clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
+          count_clus <- 1
+          for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+            clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
+            temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
+            count_clus <- count_clus + 1
           }
-          pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
+          perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
         }
+        statuses <- c()
+        for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+          statuses <- c(statuses, length(which(temp_to_analyze[which(temp_to_analyze$clus_num == f_clus_num),]$status == 1)))
+        }
+        pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         pval_res <- c(pval_res, pval)
         if (pval < alpha) {
           est_eff_res <- c(est_eff_res, est)
