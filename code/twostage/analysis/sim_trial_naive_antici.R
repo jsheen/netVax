@@ -12,14 +12,14 @@ n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 4
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 30
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.9
+R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 3
+threshold_inclusion = 3 # number of infections sampled from a cluster needed for the cluster to be included for analysis
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -247,7 +247,7 @@ library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(cores[1]-1)
+cl <- makeCluster(2)#cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
