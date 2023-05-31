@@ -12,10 +12,10 @@ n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0)
-N_assignment_mechanism_sets = 30
+assignment_mechanisms = c(0, 0.1)
+N_assignment_mechanism_sets = 5
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0
+R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -107,7 +107,7 @@ run_trial <- function(trial_num) {
       clus_num_f_cnt <- 0
       clus_num_f_cont_cnt <- 0
       for (clus_num_f in unique(to_analyze$clus_num)) {
-        if (length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1 | 
+        if (#length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1 | 
             length(which(to_analyze$clus_num == clus_num_f & to_analyze$status == 1)) < threshold_inclusion) {
           to_delete <- c(to_delete, which(to_analyze$clus_num == clus_num_f))
           clus_num_f_cnt <- clus_num_f_cnt + 1

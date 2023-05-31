@@ -12,31 +12,22 @@ n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 5
-N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
+assignment_mechanism = 0.1
+N_assignment_mechanism_sets = 4
+N_groups = 2 * N_assignment_mechanism_sets
 R0_vax = 1.1
-if (N_groups %% length(assignment_mechanisms) != 0) {
-  stop('The number of groups should be divisible by the number of assignment mechanisms.')
-}
 threshold_inclusion = 3
 
 # Get simulations to use for each assignment mechanism -------------------------
-to_use_ls <- list()
-to_use_ls_dex <- 1
-for (assignment_mechanism in assignment_mechanisms) {
-  to_use <- c()
-  for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR.csv'))
-    if (test_cluster$node[1] != 'na') {
-      to_use <- c(to_use, sim_num)
-    }
+to_use <- c()
+for (sim_num in 0:(N_sims - 1)) {
+  test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR.csv'))
+  if (test_cluster$node[1] != 'na') {
+    to_use <- c(to_use, sim_num)
   }
-  if (length(to_use) != N_sims) {
-    stop('Should use all sims.')
-  }
-  to_use_ls[[to_use_ls_dex]] <- to_use
-  to_use_ls_dex <- to_use_ls_dex + 1
+}
+if (length(to_use) != N_sims) {
+  stop('Should use all sims.')
 }
 
 # Function to run trial simulation ---------------------------------------------
@@ -44,53 +35,72 @@ run_trial <- function(trial_num) {
   if (trial_num %% 100 == 0) {
     write.csv(c('test'), paste0('~/netVax/scratch/overreactionary_', trial_num, '.csv'))
   }
-  clusters_to_use <- c()
-  for (assignment_mechanism_dex in 1:length(assignment_mechanisms)) {
-    clusters_to_use <- c(clusters_to_use, sample(to_use_ls[[assignment_mechanism_dex]], N_assignment_mechanism_sets))
-  }
-  clusters_to_use_mat <- matrix(clusters_to_use, nrow=length(assignment_mechanisms), ncol=N_assignment_mechanism_sets, byrow=TRUE)
-  clusters_to_use_final <- c(clusters_to_use_mat)
+  clusters_to_use <- sample(to_use, N_assignment_mechanism_sets)
   clusters_to_use_dex <- 1
   trial_dfs <- list()
-  for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR.csv'))
+  for (cluster_to_use in clusters_to_use) {
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', cluster_to_use, '_SEIR.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
-  # First, calculate percent infected within each cluster of different assignment
-  sum_cluster_average <- rep(0, length(assignment_mechanisms))
-  sampled_ls <- list()
-  for (assignment_mech_dex in 1:length(assignment_mechanisms)) {
-    assignment_mech_ls <- list()
-    assignment_mech_ls_dex <- 1
-    for (trial_df_dex in seq(assignment_mech_dex, N_groups, length(assignment_mechanisms))) {
-      cluster_df <- trial_dfs[[trial_df_dex]]
-      if (cluster_df$node[1] == 'na') {
-        stop('Error in enrolled cluster')
-      } else {
-        # The following is to get the true effect
-        denom_to_add <- length(which(cluster_df$assignment == 'na'))
-        num_to_add <- length(which(cluster_df$assignment == 'na' & cluster_df$time2inf_trt < cutoff))
-        cluster_average <- num_to_add / denom_to_add
-        sum_cluster_average[assignment_mech_dex] <- sum_cluster_average[assignment_mech_dex] + cluster_average
-        # The following is prepare the dataframe for the naive analysis
-        mod_cluster_df <- cluster_df
-        mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),]
-        mod_cluster_df$assignment_mech <- assignment_mech_dex
-        mod_cluster_df$clus_num <- paste0(assignment_mech_dex, '_', trial_df_dex)
-        mod_cluster_df$status <- ifelse(mod_cluster_df$time2inf_trt < cutoff, 1, 0) # Where 1 is infected, 0 is censored
-        mod_cluster_df <- mod_cluster_df[sample(1:nrow(mod_cluster_df), N_sample),] # Sample some number of this, assuming samp_num << number that are 'na'
-        assignment_mech_ls[[assignment_mech_ls_dex]] <- mod_cluster_df
-        assignment_mech_ls_dex <- assignment_mech_ls_dex + 1
-      }
-    }
-    assignment_mech_df <- do.call(rbind, assignment_mech_ls)
-    if (is.null(assignment_mech_df)) {
-      sampled_ls[[assignment_mech_dex]] <- data.frame(matrix(NA, nrow=1, ncol=1))
-    } else {
-      sampled_ls[[assignment_mech_dex]] <- assignment_mech_df
+  # Prepare dataframe to analyze
+  to_analyze_ls <- list()
+  to_analyze_ls_dex <- 1
+  for (trial_df_dex in 1:length(trial_dfs)) {
+    mod_cluster_df <- trial_dfs[[trial_df_dex]]
+    mod_cluster_df$status <- ifelse(mod_cluster_df$time2inf_trt < cutoff, 1, 0) # Where 1 is infected, 0 is censored
+    if (length(which(mod_cluster_df$status == 1)) >= threshold_inclusion) {
+      # Subset to enrolled
+      e_mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'e'),]
+      e_mod_cluster_df$clus_num <- paste0(trial_df_dex, '_e')
+      # Subset to not enrolled
+      na_mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),]
+      na_mod_cluster_df$clus_num <- paste0(trial_df_dex, '_na')
+      na_mod_cluster_df <- na_mod_cluster_df[sample(1:nrow(na_mod_cluster_df), N_sample),] # Sample some number of this, assuming samp_num << number that are 'na'
+      to_analyze_ls[[to_analyze_ls_dex]] <- rbind(e_mod_cluster_df, na_mod_cluster_df)
+      to_analyze_ls_dex <- to_analyze_ls_dex + 1
     }
   }
+  to_analyze <- do.call(rbind, to_analyze_ls)
+  # Calculate estimate
+  calc_est <- function(to_analyze) {
+    for (f_clus_num in unique(to_analyze$clus_num)) {
+      f_to_analyze <- to_analyze[which(to_analyze$clus_num == f_clus_num),]
+      
+    }
+  }
+  
+  
+  
+  sum_cluster_average <- rep(0, length(assignment_mechanisms))
+  sampled_ls <- list()
+
+
+  for (trial_df_dex in seq(assignment_mech_dex, N_groups, length(assignment_mechanisms))) {
+    cluster_df <- trial_dfs[[trial_df_dex]]
+    if (cluster_df$node[1] == 'na') {
+      stop('Error in enrolled cluster')
+    } else {
+      # The following is prepare the dataframe for the naive analysis
+      mod_cluster_df <- cluster_df
+      
+      if (length(which(mod_cluster_df$assignment == 'e')) == 0)
+      mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'e'),]
+      mod_cluster_df$assignment_mech <- assignment_mech_dex
+      mod_cluster_df$clus_num <- paste0(assignment_mech_dex, '_', trial_df_dex)
+      mod_cluster_df$status <- ifelse(mod_cluster_df$time2inf_trt < cutoff, 1, 0) # Where 1 is infected, 0 is censored
+      mod_cluster_df <- mod_cluster_df[sample(1:nrow(mod_cluster_df), N_sample),] # Sample some number of this, assuming samp_num << number that are 'na'
+      assignment_mech_ls[[assignment_mech_ls_dex]] <- mod_cluster_df
+      assignment_mech_ls_dex <- assignment_mech_ls_dex + 1
+    }
+  }
+  assignment_mech_df <- do.call(rbind, assignment_mech_ls)
+  if (is.null(assignment_mech_df)) {
+    sampled_ls[[assignment_mech_dex]] <- data.frame(matrix(NA, nrow=1, ncol=1))
+  } else {
+    sampled_ls[[assignment_mech_dex]] <- assignment_mech_df
+  }
+  
   # First, get information from sampled clusters
   est_eff_res <- c()
   bs_est_eff_res <- c()
@@ -107,7 +117,7 @@ run_trial <- function(trial_num) {
       clus_num_f_cnt <- 0
       clus_num_f_cont_cnt <- 0
       for (clus_num_f in unique(to_analyze$clus_num)) {
-        if (#length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1 | 
+        if (length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1 | 
             length(which(to_analyze$clus_num == clus_num_f & to_analyze$status == 1)) < threshold_inclusion) {
           to_delete <- c(to_delete, which(to_analyze$clus_num == clus_num_f))
           clus_num_f_cnt <- clus_num_f_cnt + 1
@@ -244,10 +254,10 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
-save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_", assignment_mechanisms[2], "_", R0_vax, "_", N_assignment_mechanism_sets,".RData"))
+save(final, file = paste0("~/netVax/code_output/twostage/rData/dir_final", R0_vax, "_naive_", assignment_mechanisms[2], "_", R0_vax, "_", N_assignment_mechanism_sets,".RData"))
 
 # Load results -----------------------------------------------------------------
-load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_", assignment_mechanisms[2], "_", R0_vax, "_", N_assignment_mechanism_sets,".RData"))
+load(paste0("~/netVax/code_output/twostage/rData/dir_final", R0_vax, "_naive_", assignment_mechanisms[2], "_", R0_vax, "_", N_assignment_mechanism_sets,".RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()
