@@ -19,7 +19,7 @@ R0_vax = 1.1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 3
+threshold_inclusion = 1
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
