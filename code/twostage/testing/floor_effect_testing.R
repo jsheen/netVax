@@ -20,10 +20,11 @@ assignment_mechanisms = c(0, 0.1)
 N_assignment_mechanism_sets = 5
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
+antici_input = '' # '_antici'
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 3
+threshold_inclusion = 1
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -31,7 +32,7 @@ to_use_ls_dex <- 1
 for (assignment_mechanism in assignment_mechanisms) {
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR_antici.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', assignment_mechanism, '_sim', sim_num, '_SEIR', antici_input, '.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -57,7 +58,7 @@ run_trial <- function(trial_num, counter) {
   clusters_to_use_dex <- 1
   trial_dfs <- list()
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR', antici_input, '.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
@@ -175,7 +176,7 @@ run_trial <- function(trial_num, counter) {
           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         }
         
-        # Check whether the value below est is below 95% and the values above est is above 95%
+        # ******Check whether the % values below est is below 95% and that % values below est_dex + 1 is higher than 95%
         uniq_vals <- unique(perms_hist)
         ordered_uniq_vals <- uniq_vals[order(uniq_vals)]
         inv_pval <- length(which(perms_hist < est)) / length(perms_hist)
@@ -185,10 +186,14 @@ run_trial <- function(trial_num, counter) {
           inv_pval_above_est <- 1
         } else {
           above_est_dex <- which(ordered_uniq_vals == est) + 1
-          inv_pval_above_est <- length(which(perms_hist < ordered_uniq_vals[below_est_dex])) / length(perms_hist)
+          inv_pval_above_est <- length(which(perms_hist < ordered_uniq_vals[above_est_dex])) / length(perms_hist)
         }
+        num_vals <- NA
+        num_clus <- NA
         if (inv_pval < 0.95 & inv_pval_above_est > 0.95) {
           counter <- T
+          num_vals <- length(uniq_vals)
+          num_clus <- N_clus_c_perm + N_clus_t_perm
         }
         
         pval_res <- c(pval_res, pval)
@@ -260,11 +265,16 @@ run_trial <- function(trial_num, counter) {
                       data.frame(matrix(bs_est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
                       data.frame(matrix(pval_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
                       temp_df)
-  return(c(pval, counter))
+  return(c(pval, counter, num_vals, num_clus))
 }
 
+# If run_trial returns True, then this means that the percentage block of the 
+# indirect protective effect estimate is above the 95% quantile mark, but that 
+# less than 95% of the values are below the indirect protective effect estimate.
 count <- 0
 pvals <- c()
+num_vals_hist <- c()
+num_clus_hist <- c()
 for (i in 1:100) {
   if (i %% 10 == 0) {
     print(i)
@@ -272,10 +282,13 @@ for (i in 1:100) {
   res <- run_trial(i, F)
   if (res[2]) {
     count <- count + 1
+    num_vals_hist <- c(num_vals_hist, res[3])
+    num_clus_hist <- c(num_clus_hist, res[4])
   }
   pvals <- c(pvals, res[1])
 }
 count / 100
 length(which(pvals < 0.05)) / length(pvals)
-
+hist(num_vals_hist)
+hist(num_clus_hist)
 
