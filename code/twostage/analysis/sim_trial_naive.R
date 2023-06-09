@@ -7,19 +7,19 @@ library("RcppAlgos")
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
+N_trials = 100 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
 assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 5
+N_assignment_mechanism_sets = 9
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 1.1
+R0_vax = 0.5
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 1
+threshold_inclusion = 2
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
