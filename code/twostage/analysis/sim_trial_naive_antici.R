@@ -8,7 +8,7 @@ set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
 N_trials = 200 # Number of trial simulations to conduct
-n_perm = 1000
+n_perm = 200
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
@@ -19,7 +19,7 @@ R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 2 # number of infections sampled from a cluster needed for the cluster to be included for analysis
+threshold_inclusion = 0 # number of infections sampled from a cluster needed for the cluster to be included for analysis
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -242,12 +242,222 @@ run_trial <- function(trial_num) {
   return(to_return_ls)
 }
 
+# count <- 0
+# count_c <- 0
+# count_t <- 0
+# for (i in 1:100) {
+#   if (trial_num %% 100 == 0) {
+#     write.csv(c('test'), paste0('~/netVax/scratch/overreactionary_', trial_num, '.csv'))
+#   }
+#   clusters_to_use <- c()
+#   for (assignment_mechanism_dex in 1:length(assignment_mechanisms)) {
+#     clusters_to_use <- c(clusters_to_use, sample(to_use_ls[[assignment_mechanism_dex]], N_assignment_mechanism_sets))
+#   }
+#   clusters_to_use_mat <- matrix(clusters_to_use, nrow=length(assignment_mechanisms), ncol=N_assignment_mechanism_sets, byrow=TRUE)
+#   clusters_to_use_final <- c(clusters_to_use_mat)
+#   clusters_to_use_dex <- 1
+#   trial_dfs <- list()
+#   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
+#     cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff1_assign', realized_assign, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR.csv'))
+#     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
+#     clusters_to_use_dex <- clusters_to_use_dex + 1
+#   }
+#   # First, calculate percent infected within each cluster of different assignment
+#   sum_cluster_average <- rep(0, length(assignment_mechanisms))
+#   sampled_ls <- list()
+#   for (assignment_mech_dex in 1:length(assignment_mechanisms)) {
+#     assignment_mech_ls <- list()
+#     assignment_mech_ls_dex <- 1
+#     for (trial_df_dex in seq(assignment_mech_dex, N_groups, length(assignment_mechanisms))) {
+#       cluster_df <- trial_dfs[[trial_df_dex]]
+#       if (cluster_df$node[1] == 'na') {
+#         stop('Error in enrolled cluster')
+#       } else {
+#         # The following is to get the true effect
+#         denom_to_add <- length(which(cluster_df$assignment == 'na'))
+#         num_to_add <- length(which(cluster_df$assignment == 'na' & cluster_df$time2inf_trt < cutoff))
+#         cluster_average <- num_to_add / denom_to_add
+#         sum_cluster_average[assignment_mech_dex] <- sum_cluster_average[assignment_mech_dex] + cluster_average
+#         # The following is prepare the dataframe for the naive analysis
+#         mod_cluster_df <- cluster_df
+#         mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),]
+#         mod_cluster_df$assignment_mech <- assignment_mech_dex
+#         mod_cluster_df$clus_num <- paste0(assignment_mech_dex, '_', trial_df_dex)
+#         mod_cluster_df$status <- ifelse(mod_cluster_df$time2inf_trt < cutoff, 1, 0) # Where 1 is infected, 0 is censored
+#         mod_cluster_df <- mod_cluster_df[sample(1:nrow(mod_cluster_df), N_sample),] # Sample some number of this, assuming samp_num << number that are 'na'
+#         assignment_mech_ls[[assignment_mech_ls_dex]] <- mod_cluster_df
+#         assignment_mech_ls_dex <- assignment_mech_ls_dex + 1
+#       }
+#     }
+#     assignment_mech_df <- do.call(rbind, assignment_mech_ls)
+#     if (is.null(assignment_mech_df)) {
+#       sampled_ls[[assignment_mech_dex]] <- data.frame(matrix(NA, nrow=1, ncol=1))
+#     } else {
+#       sampled_ls[[assignment_mech_dex]] <- assignment_mech_df
+#     }
+#   }
+#   # First, get information from sampled clusters
+#   est_eff_res <- c()
+#   bs_est_eff_res <- c()
+#   pval_res <- c()
+#   for (sampled_dex in 1:(length(sampled_ls) - 1)) {
+#     low_df <- sampled_ls[[sampled_dex]]
+#     high_df <- sampled_ls[[sampled_dex + 1]]
+#     if (ncol(low_df) > 1 & ncol(high_df) > 1) {
+#       low_df$cond <- 0
+#       high_df$cond <- 1
+#       to_analyze <- rbind(low_df, high_df)
+#       # Get rid of those with a single outcome (either all the unvaccinated were infected, or all not infected)
+#       to_delete <- c()
+#       clus_num_f_cnt <- 0
+#       clus_num_f_cont_cnt <- 0
+#       for (clus_num_f in unique(to_analyze$clus_num)) {
+#         if (#length(unique(to_analyze[which(to_analyze$clus_num == clus_num_f),]$status)) == 1 |
+#           length(which(to_analyze$clus_num == clus_num_f & to_analyze$status == 1)) < threshold_inclusion) {
+#           to_delete <- c(to_delete, which(to_analyze$clus_num == clus_num_f))
+#           clus_num_f_cnt <- clus_num_f_cnt + 1
+#           count <- count + 1
+#           if (to_analyze[which(to_analyze$clus_num == clus_num_f),]$cond[1] == 0) {
+#             clus_num_f_cont_cnt <- clus_num_f_cont_cnt + 1
+#           }
+#         }
+#       }
+#       count_c <- count_c + clus_num_f_cont_cnt
+#       count_t <- count_t + (clus_num_f_cnt - clus_num_f_cont_cnt)
+#       if (!is.null(to_delete)) {
+#         to_analyze <- to_analyze[-to_delete,]
+#       }
+#       if (length(which(to_analyze$assignment_mech == 1)) < 1 | length(which(to_analyze$assignment_mech == 2)) < 1) {
+#         pval_res <- c(pval_res, NA)
+#         est_eff_res <- c(est_eff_res, NA)
+#         bs_est_eff_res <- c(bs_est_eff_res, NA)
+#       } else {
+#         # Calculate naive estimate
+#         calc_est <- function(to_analyze) {
+#           conts <- c()
+#           treats <- c()
+#           for (f_clus_num in unique(to_analyze$clus_num)) {
+#             res <- length(which(to_analyze$status == 1 & to_analyze$clus_num == f_clus_num)) / length(which(to_analyze$clus_num == f_clus_num))
+#             if (to_analyze$cond[which(to_analyze$clus_num == f_clus_num)][1] == 0) { # Check if cluster is control or treatment
+#               conts <- c(conts, res)
+#             } else {
+#               treats <- c(treats, res)
+#             }
+#           }
+#           return(mean(conts) - mean(treats))
+#         }
+#         est <- calc_est(to_analyze)
+#         # Permutation test for p-value
+#         outcomes <- to_analyze$status
+#         N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
+#         N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
+#         if (N_clus_c_perm + N_clus_t_perm <= 12) {
+#           perms_hist <- c()
+#           new_control_assigns <- combn(unique(to_analyze$clus_num), m=N_clus_c_perm)
+#           for (col_control_assign_dex in 1:ncol(new_control_assigns)) {
+#             temp_to_analyze <- to_analyze
+#             temp_to_analyze$cond <- 1
+#             for (row_control_assign_dex in 1:nrow(new_control_assigns)) {
+#               temp_to_analyze$cond[which(temp_to_analyze$clus_num == new_control_assigns[row_control_assign_dex, col_control_assign_dex])] <- 0
+#             }
+#             perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+#           }
+#           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
+#         } else {
+#           perms_hist <- c()
+#           for (perm_dex in 1:n_perm) {
+#             temp_to_analyze <- to_analyze
+#             clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
+#             count_clus <- 1
+#             for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+#               clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
+#               temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
+#               count_clus <- count_clus + 1
+#             }
+#             perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+#           }
+#           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
+#         }
+#         pval_res <- c(pval_res, pval)
+#         if (pval <= alpha) {
+#           est_eff_res <- c(est_eff_res, est)
+#           # Do bootstrap estimate
+#           bs_ests <- c()
+#           for (iter in 1:num_bootstrap_sample) {
+#             # 1) construct bootstrap sample:
+#             passed <- FALSE
+#             while (!passed) {
+#               bs_samp_ls <- list()
+#               bs_samp_ls_dex <- 1
+#               control_to_analyze <- to_analyze[which(to_analyze$cond == 0),]
+#               N_clus_control <- as.integer(nrow(control_to_analyze) / 100)
+#               treated_to_analyze <- to_analyze[which(to_analyze$cond == 1),]
+#               N_clus_treated <- as.integer(nrow(treated_to_analyze) / 100)
+#               if (nrow(control_to_analyze) %% 100 != 0 | nrow(treated_to_analyze) %% 100 != 0) {
+#                 stop('Error in number of observations in either treatment or control.')
+#               }
+#               sampled_controls <- sample(unique(control_to_analyze$clus_num), N_clus_control, replace=TRUE)
+#               for (sampled_control in sampled_controls) {
+#                 clus_samp <- control_to_analyze[which(control_to_analyze$clus_num == sampled_control),]
+#                 bs_indices <- sample(1:nrow(clus_samp), nrow(clus_samp), replace = TRUE)
+#                 bs_samp_ls[[bs_samp_ls_dex]] <- clus_samp[bs_indices,]
+#                 bs_samp_ls_dex <- bs_samp_ls_dex + 1
+#               }
+#               sampled_treats <- sample(unique(treated_to_analyze$clus_num), N_clus_treated, replace=TRUE)
+#               for (sampled_treat in sampled_treats) {
+#                 clus_samp <- treated_to_analyze[which(treated_to_analyze$clus_num == sampled_treat),]
+#                 bs_indices <- sample(1:nrow(clus_samp), nrow(clus_samp), replace = TRUE)
+#                 bs_samp_ls[[bs_samp_ls_dex]] <- clus_samp[bs_indices,]
+#                 bs_samp_ls_dex <- bs_samp_ls_dex + 1
+#               }
+#               bs_samp <- do.call(rbind, bs_samp_ls)
+#               bs_samp <- bs_samp[order(bs_samp$cond),]
+#               if (nrow(bs_samp) != nrow(to_analyze)) {
+#                 stop('Error in creating bootstrap. (1)')
+#               }
+#               if (length(unique(bs_samp$cond)) == 2) {# &
+#                 #length(which(bs_samp$status == 1 & bs_samp$cond == 0)) / length(which(bs_samp$cond == 0)) != length(which(bs_samp$status == 1 & bs_samp$cond == 1)) / length(which(bs_samp$cond == 1))) {
+#                 passed <- TRUE
+#               } else if (length(unique(bs_samp$cond)) > 2) {
+#                 stop('Error in creating bootstrap. (2)')
+#               }
+#             }
+#             # 2) run naive
+#             # Calculate naive estimate
+#             bs_est <- calc_est(bs_samp)
+#             bs_ests <- c(bs_ests, bs_est)
+#           }
+#           bs_est_eff_res <- c(bs_est_eff_res, unname(abs(quantile(bs_ests, probs=c(.025)) - quantile(bs_ests, probs=c(.975)))))
+#         } else {
+#           est_eff_res <- c(est_eff_res, NA)
+#           bs_est_eff_res <- c(bs_est_eff_res, NA)
+#         }
+#       }
+#     } else {
+#       write.csv(c('err'), paste0('~/netVax/scratch/err_overreactionary_', trial_num, '.csv'))
+#       est_eff_res <- c(est_eff_res, NA)
+#       pval_res <- c(pval_res, NA)
+#     }
+#   }
+#   # Code to get true ASE effect (temp_df)
+#   ave_cluster_average <- sum_cluster_average / N_assignment_mechanism_sets
+#   temp_df <- data.frame(matrix(ave_cluster_average[1:length(ave_cluster_average) - 1] - ave_cluster_average[2:length(ave_cluster_average)], nrow=1, ncol=length(ave_cluster_average) - 1))
+#   # Code to store the true effect (est_eff_res) the bootstraps (bs_est_eff_res) and the p_values (p_val_res) and true ASE effect (temp_df)
+#   to_return_ls = list(data.frame(matrix(est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
+#                       data.frame(matrix(bs_est_eff_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
+#                       data.frame(matrix(pval_res, nrow=1, ncol=(length(assignment_mechanisms) - 1))),
+#                       temp_df)
+# }
+# count
+# count_c
+# count_t
+
 # Run in parallel --------------------------------------------------------------
 library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(2)#cores[1]-1)
+cl <- makeCluster(cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
