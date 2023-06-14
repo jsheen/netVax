@@ -8,12 +8,12 @@ set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
 N_trials = 200 # Number of trial simulations to conduct
-n_perm = 100
+n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
 assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 40
+N_assignment_mechanism_sets = 35
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
@@ -171,7 +171,7 @@ run_trial <- function(trial_num) {
           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         }
         pval_res <- c(pval_res, pval)
-        if (pval <= alpha) {
+        if (pval < alpha) {
           est_eff_res <- c(est_eff_res, est)
           # Do bootstrap estimate
           bs_ests <- c()
@@ -247,7 +247,7 @@ library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(cores[1]-1)
+cl <- makeCluster(2)#cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
