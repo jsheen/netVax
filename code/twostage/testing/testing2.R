@@ -1,4 +1,4 @@
-R0_vax = 0.5
+R0_vax = 0
 assignment_mechanism = 0
 cutoff_react = 120
 cutoff_antici = 120
