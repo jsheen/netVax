@@ -27,8 +27,8 @@ for (j in 1:10) {
 threshold = 2
 length(which(sampled_react < threshold)) / 20000
 length(which(sampled_antici < threshold)) / 20000
-#hist(to_hist_react, col='blue')
-#hist(to_hist_antici, col='red', add=TRUE)
+hist(to_hist_react, col='blue', breaks=100)
+hist(to_hist_antici, col='red', add=TRUE, breaks=100)
 mean(to_hist_react) / 1000
 mean(to_hist_antici) / 1000
 

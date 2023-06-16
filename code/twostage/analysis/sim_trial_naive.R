@@ -7,19 +7,19 @@ library("RcppAlgos")
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 200 # Number of trial simulations to conduct
-n_perm = 200
+N_trials = 1000 # Number of trial simulations to conduct
+n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 35
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 50
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 0
+threshold_inclusion = 2
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -245,7 +245,7 @@ run_trial <- function(trial_num) {
 # count <- 0
 # count_c <- 0
 # count_t <- 0
-# for (i in 1:100) {
+# for (i in 1:200) {
 #   if (trial_num %% 100 == 0) {
 #     write.csv(c('test'), paste0('~/netVax/scratch/overreactionary_', trial_num, '.csv'))
 #   }
@@ -457,7 +457,7 @@ library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(cores[1]-1)
+cl <- makeCluster(6)#cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)

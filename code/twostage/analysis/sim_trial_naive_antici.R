@@ -7,23 +7,24 @@ library("RcppAlgos")
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 200 # Number of trial simulations to conduct
-n_perm = 200
+N_trials = 1000 # Number of trial simulations to conduct
+n_perm = 1000
 cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 35
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 50
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 0 # number of infections sampled from a cluster needed for the cluster to be included for analysis
+threshold_inclusion = 2 # number of infections sampled from a cluster needed for the cluster to be included for analysis
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
 to_use_ls_dex <- 1
+count <- 0
 for (assignment_mechanism in assignment_mechanisms) {
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
@@ -31,12 +32,18 @@ for (assignment_mechanism in assignment_mechanisms) {
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
+    if (length(which(test_cluster$time2inf_trt == 0)) != 4) {
+      count <- count + 1
+    }
   }
   if (length(to_use) != N_sims) {
     stop('Should use all sims.')
   }
   to_use_ls[[to_use_ls_dex]] <- to_use
   to_use_ls_dex <- to_use_ls_dex + 1
+}
+if (count > 0) {
+  stop('Error in seeded infections.')
 }
 
 # Function to run trial simulation ---------------------------------------------
@@ -75,7 +82,7 @@ run_trial <- function(trial_num) {
         sum_cluster_average[assignment_mech_dex] <- sum_cluster_average[assignment_mech_dex] + cluster_average
         # The following is prepare the dataframe for the naive analysis
         mod_cluster_df <- cluster_df
-        mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),]
+        mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'na'),] #& cluster_df$time2inf_trt != 0),]
         mod_cluster_df$assignment_mech <- assignment_mech_dex
         mod_cluster_df$clus_num <- paste0(assignment_mech_dex, '_', trial_df_dex)
         mod_cluster_df$status <- ifelse(mod_cluster_df$time2inf_trt < cutoff, 1, 0) # Where 1 is infected, 0 is censored
@@ -171,7 +178,7 @@ run_trial <- function(trial_num) {
           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         }
         pval_res <- c(pval_res, pval)
-        if (pval < alpha) {
+        if (pval <= alpha) {
           est_eff_res <- c(est_eff_res, est)
           # Do bootstrap estimate
           bs_ests <- c()
@@ -245,7 +252,7 @@ run_trial <- function(trial_num) {
 # count <- 0
 # count_c <- 0
 # count_t <- 0
-# for (i in 1:100) {
+# for (i in 1:200) {
 #   if (trial_num %% 100 == 0) {
 #     write.csv(c('test'), paste0('~/netVax/scratch/overreactionary_', trial_num, '.csv'))
 #   }
@@ -457,7 +464,7 @@ library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(cores[1]-1)
+cl <- makeCluster(5)#cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
