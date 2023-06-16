@@ -15,7 +15,7 @@ node, assignment, time2inf_trt
 13,na,1000
 14,na,1000
 15,na,1000
-16,na,0
+16,na,1000
 17,na,1000
 18,na,1000
 19,na,1000
@@ -87,7 +87,7 @@ node, assignment, time2inf_trt
 85,na,1000
 86,na,1000
 87,na,1000
-88,na,1000
+88,na,0
 89,na,1000
 90,na,1000
 91,na,1000
@@ -266,7 +266,7 @@ node, assignment, time2inf_trt
 264,na,1000
 265,na,1000
 266,na,1000
-267,na,0
+267,na,1000
 268,na,1000
 269,na,1000
 270,na,1000
@@ -388,7 +388,7 @@ node, assignment, time2inf_trt
 386,na,1000
 387,na,1000
 388,na,1000
-389,na,0
+389,na,1000
 390,na,1000
 391,na,1000
 392,na,1000
@@ -489,7 +489,7 @@ node, assignment, time2inf_trt
 487,na,1000
 488,na,1000
 489,na,1000
-490,na,0
+490,na,1000
 491,na,1000
 492,na,1000
 493,na,1000
@@ -672,7 +672,7 @@ node, assignment, time2inf_trt
 670,na,1000
 671,na,1000
 672,na,1000
-673,na,1000
+673,na,10.095687460262665
 674,na,1000
 675,na,1000
 676,na,1000
@@ -763,7 +763,7 @@ node, assignment, time2inf_trt
 761,na,1000
 762,na,1000
 763,na,1000
-764,na,1000
+764,na,0
 765,na,1000
 766,na,1000
 767,na,1000
@@ -772,7 +772,7 @@ node, assignment, time2inf_trt
 770,na,1000
 771,na,1000
 772,na,1000
-773,na,18.628465410395634
+773,na,1000
 774,na,1000
 775,na,1000
 776,na,1000
@@ -814,7 +814,7 @@ node, assignment, time2inf_trt
 812,na,1000
 813,na,1000
 814,na,1000
-815,na,1000
+815,na,0
 816,na,1000
 817,na,1000
 818,na,1000
@@ -871,7 +871,7 @@ node, assignment, time2inf_trt
 869,na,1000
 870,na,1000
 871,na,1000
-872,na,1000
+872,na,0
 873,na,1000
 874,na,1000
 875,na,1000
