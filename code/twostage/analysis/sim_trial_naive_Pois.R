@@ -19,7 +19,7 @@ R0_vax = 0.5
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 2
+threshold_inclusion = 3
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -247,7 +247,7 @@ library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(5)#cores[1]-1)
+cl <- makeCluster(cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
