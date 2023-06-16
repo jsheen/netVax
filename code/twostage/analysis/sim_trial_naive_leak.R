@@ -19,7 +19,7 @@ R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 2
+threshold_inclusion = 3
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -171,7 +171,7 @@ run_trial <- function(trial_num) {
           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         }
         pval_res <- c(pval_res, pval)
-        if (pval < alpha) {
+        if (pval <= alpha) {
           est_eff_res <- c(est_eff_res, est)
           # Do bootstrap estimate
           bs_ests <- c()
