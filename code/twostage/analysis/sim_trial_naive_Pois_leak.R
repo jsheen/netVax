@@ -13,9 +13,9 @@ cutoff = 120
 alpha = 0.05
 num_bootstrap_sample = 1
 assignment_mechanisms = c(0, 0)
-N_assignment_mechanism_sets = 60
+N_assignment_mechanism_sets = 6
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0
+R0_vax = 0.5
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
@@ -247,7 +247,7 @@ library(foreach)
 library(doParallel)
 library(pracma)
 cores <- detectCores()
-cl <- makeCluster(2)#cores[1]-1)
+cl <- makeCluster(cores[1]-1)
 registerDoParallel(cl)
 final <- foreach(i=1:N_trials) %dopar% {
   library(deSolve)
