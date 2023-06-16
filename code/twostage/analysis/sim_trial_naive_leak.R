@@ -11,15 +11,15 @@ N_trials = 1000 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 120
 alpha = 0.05
-num_bootstrap_sample = 1000
-assignment_mechanisms = c(0, 0.1)
-N_assignment_mechanism_sets = 110
+num_bootstrap_sample = 1
+assignment_mechanisms = c(0, 0)
+N_assignment_mechanism_sets = 50
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 0
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
 }
-threshold_inclusion = 3
+threshold_inclusion = 2
 
 # Get simulations to use for each assignment mechanism -------------------------
 to_use_ls <- list()
@@ -143,19 +143,33 @@ run_trial <- function(trial_num) {
         outcomes <- to_analyze$status
         N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
         N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
-        perms_hist <- c()
-        for (perm_dex in 1:n_perm) {
-          temp_to_analyze <- to_analyze
-          clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
-          count_clus <- 1
-          for (f_clus_num in unique(temp_to_analyze$clus_num)) {
-            clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
-            temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
-            count_clus <- count_clus + 1
+        if (N_clus_c_perm + N_clus_t_perm <= 12) {
+          perms_hist <- c()
+          new_control_assigns <- combn(unique(to_analyze$clus_num), m=N_clus_c_perm)
+          for (col_control_assign_dex in 1:ncol(new_control_assigns)) {
+            temp_to_analyze <- to_analyze
+            temp_to_analyze$cond <- 1
+            for (row_control_assign_dex in 1:nrow(new_control_assigns)) {
+              temp_to_analyze$cond[which(temp_to_analyze$clus_num == new_control_assigns[row_control_assign_dex, col_control_assign_dex])] <- 0
+            }
+            perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
           }
-          perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+          pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
+        } else {
+          perms_hist <- c()
+          for (perm_dex in 1:n_perm) {
+            temp_to_analyze <- to_analyze
+            clus_assigns <- sample(c(rep(0, N_clus_c_perm), rep(1, N_clus_t_perm)), size = N_clus_c_perm + N_clus_t_perm, replace=F)
+            count_clus <- 1
+            for (f_clus_num in unique(temp_to_analyze$clus_num)) {
+              clus_dex <- which(temp_to_analyze$clus_num == f_clus_num)
+              temp_to_analyze$cond[clus_dex] <- rep(clus_assigns[count_clus], length(clus_dex))
+              count_clus <- count_clus + 1
+            }
+            perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
+          }
+          pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         }
-        pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
         pval_res <- c(pval_res, pval)
         if (pval < alpha) {
           est_eff_res <- c(est_eff_res, est)
