@@ -30,7 +30,7 @@ mean_degree = 15
 
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
-R0s = [0.5, 0.9, 1.1, 3]
+R0s = [2]
 param_sets = []
 for i in Ns:
     for j in R0s:
@@ -122,7 +122,7 @@ if run_sims:
         J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
         # The rest have to do with vaccination
         J.add_edge(('I', 'V_R'), ('I', 'E'), rate = 0)
-        J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = 0)
+        J.add_edge(('V_I', 'S'), ('V_I', 'V_E'), rate = 0)
         
         # Run simulations -----------------------------------------------------
         nsim = 100
@@ -241,10 +241,10 @@ def getPrelim(param_set):
     J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0)
     # The rest have to do with vaccination
     J.add_edge(('I', 'V_R'), ('I', 'E'), rate = 0)
-    J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = 0)
+    J.add_edge(('V_I', 'S'), ('V_I', 'V_E'), rate = 0)
     
     # Find day on average when expected_It_N of active infections (2000 sims) -
-    if R0 > 2:
+    if R0 >= 2:
         nsim = 2000
         I_series = []
         while (len(I_series) < nsim):
