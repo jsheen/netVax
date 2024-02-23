@@ -30,7 +30,7 @@ gamma = 1 / 10
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 overdispersions = [1]
-R0s = [0.5, 0.9, 1.1, 3]
+R0s = [2]
 param_sets = []
 for i in Ns:
     for j in overdispersions:
@@ -255,7 +255,7 @@ def getPrelim(param_set):
     J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = 0)
     
     # Find day on average when expected_It_N of active infections (2000 sims) -
-    if R0 > 2:
+    if R0 >= 2:
         nsim = 2000
         I_series = []
         while (len(I_series) < nsim):
