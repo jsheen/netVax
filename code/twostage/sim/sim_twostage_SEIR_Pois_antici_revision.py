@@ -29,10 +29,10 @@ cutoff = 150
 # Set parameter sets ----------------------------------------------------------
 Ns = [1000]
 R0_wts = [2]
-vaxs = [1.1]
-vax_effs = [0.8, 1]
-assigns = [0.05]
-assign_types = ['trad', 'trans']
+vaxs = [0]
+vax_effs = [0]
+assigns = [0]
+assign_types = ['trad']
 sim_num = 2000
 param_sets = []
 for i in Ns:
