@@ -11,11 +11,12 @@ N_trials = 1000 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 150
 alpha = 0.05
-num_bootstrap_sample = 1
-assignment_mechanisms = c('0_trad', '0_trad')
+num_bootstrap_sample = 1000
+reactionary_or_anticipatory = '_'
+assignment_mechanisms = c('0.05_trad', '0.05_trans')
 N_assignment_mechanism_sets = 5
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.9
+R0_vax = 1.1
 vaxEff = 0.8
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
@@ -33,7 +34,7 @@ for (assignment_mechanism in assignment_mechanisms) {
     if (assign_frac == 0) {
       test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt2_R0vax', 0, '_eit0.005_vaxEff', 0, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_Pois_antici_revision.csv'))
     } else {
-      test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_Pois_antici_revision.csv'))
+      test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_Pois', reactionary_or_anticipatory, 'revision.csv'))
     }
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
@@ -65,7 +66,7 @@ run_trial <- function(trial_num) {
     if (assign_frac == 0) {
       cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt2_R0vax', 0, '_eit0.005_vaxEff', 0, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois_antici_revision.csv'))
     } else {
-      cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois_antici_revision.csv'))
+      cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_Pois', reactionary_or_anticipatory, 'revision.csv'))
     }
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
@@ -271,16 +272,16 @@ final <- foreach(i=1:N_trials) %dopar% {
 }
 stopCluster(cl)
 if (assignment_mechanisms[1] == '0_trad') {
-  #save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision_control.RData"))
+  save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois", reactionary_or_anticipatory, assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision_control.RData"))
 } else {
-  #save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision.RData"))
+  save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois", reactionary_or_anticipatory, assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision.RData"))
 }
 
 # Load results -----------------------------------------------------------------
 if (assignment_mechanisms[1] == '0_trad') {
-  #load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision_control.RData"))
+  load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois", reactionary_or_anticipatory, assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision_control.RData"))
 } else {
-  #load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision.RData"))
+  load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_Pois", reactionary_or_anticipatory, assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt1_revision.RData"))
 }
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
