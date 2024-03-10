@@ -23,11 +23,11 @@ gamma = 1 / 10
 psi = 1 / 120
 mean_degree = 15
 nsim = 100
-cutoff = 120
-anticipatory = 30
+cutoff = 150
+anticipatory = 220
 
 # Set parameters --------------------------------------------------------------
-param_set = [1000, 3, 1.1, 0.8, 0.1]
+param_set = [1000, 2, 1.1, 0.8, 0.05]
 N_cluster = param_set[0]
 R0_wt = param_set[1]
 vax = param_set[2]
@@ -65,7 +65,7 @@ return_statuses = ('S', 'E', 'I', 'R', 'V_E', 'V_I', 'V_R')
 J = nx.DiGraph()
 J.add_edge(('I', 'S'), ('I', 'E'), rate = beta_R0_wt)
 J.add_edge(('I', 'V_R'), ('I', 'E'), rate = (1 - vax_eff) * beta_R0_wt)
-J.add_edge(('V_I', 'S'), ('V_I', 'V_I'), rate = beta_R0_vax)
+J.add_edge(('V_I', 'S'), ('V_I', 'V_E'), rate = beta_R0_vax)
 
 # Set threshold value of number of infections at time t -------------------
 threshold = 1
@@ -101,35 +101,39 @@ for sim in range(nsim):
     t_first_half = full_first_half.t()
     # Second half
     curr_IC_con = defaultdict(lambda: 'S')
+    for node in enrolled_nodes:
+        curr_IC_con[node] = 'V_R'
+    for inf_node in np.random.choice(np.array(list(set(G.nodes()).difference(enrolled_nodes))), initial_infections_per_cluster, replace=False):
+        curr_IC_con[inf_node] = 'I'
     curr_IC = full_first_half.get_statuses(list(G.nodes()), t_first_half[-1])
     suscep_nodes = [k for k,v in curr_IC.items() if v == 'S']
-    for inf_node in np.random.choice(list(G.nodes()), initial_infections_per_cluster, replace=False):
-        curr_IC_con[inf_node] = 'I'
     for inf_node in np.random.choice(suscep_nodes, initial_infections_per_cluster, replace=False):
         curr_IC[inf_node] = 'I'
     full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float(cutoff), return_full_data=True)    
     full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(cutoff), return_full_data=True)    
+    
+    new_t_con = full_second_half_con.t()
+    new_R_con = np.array(full_second_half_con.R())
+    new_t_trt = full_second_half_trt.t()
+    new_R_trt = np.array(full_second_half_trt.R())
+    if new_t_con[-1] < 150:
+        new_t_con = np.append(new_t_con, 150)
+        new_R_con = np.append(new_R_con, new_R_con[-1])
+    if new_t_trt[-1] < 150:
+        new_t_trt = np.append(new_t_trt, 150)
+        new_R_trt = np.append(new_R_trt, new_R_trt[-1])
+    
     # Vaccination increase
-    plt.plot(t_first_half, full_first_half.summary()[1]['V_R'] / 1000, 'blue')
-    plt.plot(full_second_half_trt.t() + t_first_half[-1], full_second_half_trt.summary()[1]['V_R'] / 1000, 'blue')
-    plt.xlim(0, cutoff + anticipatory)
+    plt.plot(new_t_con, new_R_con / 1000, 'grey')
+    plt.plot(new_t_trt, new_R_trt / 1000, 'orange')
+    plt.xlim(0, cutoff)
     plt.ylim(-0.05, 1)
-    plt.xlabel('Days after intervention', fontdict={'size':20})
-    plt.ylabel('Cumulative incidence\n& vaccination', fontdict={'size':20})
-    plt.axvline(x=anticipatory, color='red', linestyle='--')
+    plt.xlabel('Days after initial outbreak', fontdict={'size':20})
+    plt.ylabel('Cumulative incidence', fontdict={'size':20})
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
-    # Control
-    plt.plot(full_second_half_con.t() + t_first_half[-1], np.array(full_second_half_con.R()) / 1000, 'grey')
-    # Treatment (I among unvaccinated)
-    R_unvax = []
-    for t in range(cutoff):
-        count = 0
-        for node in list(set(G.nodes) - set(enrolled_nodes)):
-            if full_second_half_trt.get_statuses([node], t)[node] == 'R':
-                count += 1
-        R_unvax.append(count)
-    plt.plot(range(cutoff) + t_first_half[-1], np.array(R_unvax) / (1000 - len(enrolled_nodes)), 'orange')
-
+    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+    plt.text(4.5, 0.95, 'Anticipatory Trial\nNo Overdispersion', fontsize=17,
+        verticalalignment='top', bbox=props)
    
        
