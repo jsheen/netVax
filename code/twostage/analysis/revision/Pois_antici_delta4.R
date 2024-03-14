@@ -154,8 +154,8 @@ run_trial <- function(trial_num) {
         est <- calc_est(to_analyze)
         # Permutation test for p-value
         outcomes <- to_analyze$status
-        N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
-        N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
+        N_clus_c_perm <- length(unique(to_analyze[which(to_analyze$cond == 0),]$clus_num))#as.integer(length(which(to_analyze$cond == 0)) / 100)
+        N_clus_t_perm <- length(unique(to_analyze[which(to_analyze$cond == 1),]$clus_num))#as.integer(length(which(to_analyze$cond == 1)) / 100)
         if (N_clus_c_perm + N_clus_t_perm <= 12) {
           perms_hist <- c()
           new_control_assigns <- combn(unique(to_analyze$clus_num), m=N_clus_c_perm)
@@ -195,7 +195,7 @@ run_trial <- function(trial_num) {
               bs_samp_ls <- list()
               bs_samp_ls_dex <- 1
               control_to_analyze <- to_analyze[which(to_analyze$cond == 0),]
-              N_clus_control <- as.integer(nrow(control_to_analyze) / 100)
+              N_clus_control <- length(unique(control_to_analyze$clus_num))
               treated_to_analyze <- to_analyze[which(to_analyze$cond == 1),]
               N_clus_treated <- length(unique(treated_to_analyze$clus_num)) #as.integer(nrow(treated_to_analyze) / 100)
               # if (nrow(control_to_analyze) %% 100 != 0 | nrow(treated_to_analyze) %% 100 != 0) {

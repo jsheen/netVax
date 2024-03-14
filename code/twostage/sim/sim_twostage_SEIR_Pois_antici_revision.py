@@ -27,12 +27,12 @@ psi = 1 / 120
 cutoff = 150
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000]
+Ns = [500]
 R0_wts = [2]
-vaxs = [0]
-vax_effs = [0]
-assigns = [0]
-assign_types = ['trad']
+vaxs = [0, 0.9, 1.1]
+vax_effs = [1, 0.8]
+assigns = [0.05]
+assign_types = ['trad', 'trans']
 sim_num = 2000
 param_sets = []
 for i in Ns:
@@ -58,6 +58,8 @@ def runSim(param_set):
     mean_degree = 15
     if N_cluster == 1000:
         initial_infections_per_cluster = 4
+    elif N_cluster == 500:
+        initial_infections_per_cluster = 2
     
     # Get pre-set beta values and time of intervention value ------------------
     # Wild-type

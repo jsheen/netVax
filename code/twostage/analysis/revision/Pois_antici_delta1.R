@@ -12,11 +12,11 @@ n_perm = 1000
 cutoff = 150
 alpha = 0.05
 num_bootstrap_sample = 1
-reactionary_or_anticipatory = '_'
-assignment_mechanisms = c('0.05_trad', '0.05_trad')
+reactionary_or_anticipatory = '_antici_'
+assignment_mechanisms = c('0.05_trad', '0.05_trans')
 N_assignment_mechanism_sets = 5
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 1.1
+R0_vax = 0.9
 vaxEff = 0.8
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')

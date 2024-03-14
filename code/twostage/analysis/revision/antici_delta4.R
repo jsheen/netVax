@@ -13,7 +13,7 @@ cutoff = 150
 alpha = 0.05
 num_bootstrap_sample = 1
 assignment_mechanisms = c('0.05_trad', '0.05_trad')
-N_assignment_mechanism_sets = 6
+N_assignment_mechanism_sets = 7
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 vaxEff = 0.8
@@ -30,7 +30,7 @@ for (assignment_mechanism in assignment_mechanisms) {
   assign_type <- strsplit(assignment_mechanism, '_')[[1]][2]
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_antici_revision.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_antici_revision.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -58,7 +58,7 @@ run_trial <- function(trial_num) {
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
     assign_frac <- strsplit(realized_assign, '_')[[1]][1]
     assign_type <- strsplit(realized_assign, '_')[[1]][2]
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici_revision.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici_revision.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
@@ -82,16 +82,22 @@ run_trial <- function(trial_num) {
         mod_cluster_df <- cluster_df
         assign_frac <- strsplit(assignment_mechanisms[assignment_mech_dex], '_')[[1]][1]
         assign_type <- strsplit(assignment_mechanisms[assignment_mech_dex], '_')[[1]][2]
-        if (assign_type == 'trad') {
-          mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'ne_ni'),]
-        } else {
-          mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'ne_i'),]
-        }
+        # if (assign_type == 'trad') {
+        #   mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'ne_ni'),]
+        # } else {
+        #   mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'ne_i' | mod_cluster_df$assignment == 'ne_ni'),]
+        # }
         mod_cluster_df$assignment_mech <- assignment_mech_dex
         mod_cluster_df$clus_num <- paste0(assignment_mech_dex, '_', trial_df_dex)
         mod_cluster_df$status <- ifelse(mod_cluster_df$time2inf_trt < cutoff, 1, 0) # Where 1 is infected, 0 is censored
-        if (nrow(mod_cluster_df) > N_sample) {
-          mod_cluster_df <- mod_cluster_df[sample(1:nrow(mod_cluster_df), N_sample),] # Sample some number of this, assuming samp_num << number of interest
+        mod_cluster_df <- mod_cluster_df[sample(1:nrow(mod_cluster_df), N_sample),] # Sampling done before subsetting
+        mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'ne_i' | mod_cluster_df$assignment == 'ne_ni'),]
+        if (assign_type == 'trans') {
+          mod_cluster_df <- mod_cluster_df[which(mod_cluster_df$assignment == 'ne_i'),] # Subset to only the indirectly vaccinated
+        } else {
+          if (length(which(mod_cluster_df$assignment == 'ne_i')) > 0) {
+            stop('Error in trad. vax results.')
+          }
         }
         assignment_mech_ls[[assignment_mech_ls_dex]] <- mod_cluster_df
         assignment_mech_ls_dex <- assignment_mech_ls_dex + 1
@@ -154,8 +160,8 @@ run_trial <- function(trial_num) {
         est <- calc_est(to_analyze)
         # Permutation test for p-value
         outcomes <- to_analyze$status
-        N_clus_c_perm <- as.integer(length(which(to_analyze$cond == 0)) / 100)
-        N_clus_t_perm <- as.integer(length(which(to_analyze$cond == 1)) / 100)
+        N_clus_c_perm <- length(unique(to_analyze[which(to_analyze$cond == 0),]$clus_num))#as.integer(length(which(to_analyze$cond == 0)) / 100)
+        N_clus_t_perm <- length(unique(to_analyze[which(to_analyze$cond == 1),]$clus_num))#as.integer(length(which(to_analyze$cond == 1)) / 100)
         if (N_clus_c_perm + N_clus_t_perm <= 12) {
           perms_hist <- c()
           new_control_assigns <- combn(unique(to_analyze$clus_num), m=N_clus_c_perm)
@@ -195,7 +201,7 @@ run_trial <- function(trial_num) {
               bs_samp_ls <- list()
               bs_samp_ls_dex <- 1
               control_to_analyze <- to_analyze[which(to_analyze$cond == 0),]
-              N_clus_control <- as.integer(nrow(control_to_analyze) / 100)
+              N_clus_control <- length(unique(control_to_analyze$clus_num))
               treated_to_analyze <- to_analyze[which(to_analyze$cond == 1),]
               N_clus_treated <- length(unique(treated_to_analyze$clus_num)) #as.integer(nrow(treated_to_analyze) / 100)
               # if (nrow(control_to_analyze) %% 100 != 0 | nrow(treated_to_analyze) %% 100 != 0) {
@@ -271,10 +277,10 @@ final <- foreach(i=1:N_trials) %dopar% {
   res
 }
 stopCluster(cl)
-save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt4_revision.RData"))
+#save(final, file = paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt4_revision.RData"))
 
 # Load results -----------------------------------------------------------------
-load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt4_revision.RData"))
+#load(paste0("~/netVax/code_output/twostage/rData/final", R0_vax, "_naive_antici_", assignment_mechanisms[2], "_", N_assignment_mechanism_sets,"_delt4_revision.RData"))
 final_est_eff_res <- list()
 final_bs_est_eff_res <- list()
 final_pval_res <- list()

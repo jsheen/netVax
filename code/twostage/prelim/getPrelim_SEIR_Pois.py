@@ -29,8 +29,8 @@ gamma = 1 / 10
 mean_degree = 15
 
 # Set parameter sets ----------------------------------------------------------
-Ns = [1000]
-R0s = [2]
+Ns = [500]
+R0s = [0.9, 1.1]
 param_sets = []
 for i in Ns:
     for j in R0s:
@@ -53,6 +53,8 @@ if run_sims:
             initial_infections_per_cluster = 4
         elif N_cluster == 10000:
             initial_infections_per_cluster = 40
+        elif N_cluster == 500:
+            initial_infections_per_cluster = 2
         if eit <= initial_infections_per_cluster / N_cluster:
             raise NameError("Script assumes expected It / N strictly < initial infections per cluster / N.")
         # Joel C Miller's methods to estimate_R0 ----------------------------------
@@ -169,6 +171,8 @@ def getPrelim(param_set):
         initial_infections_per_cluster = 4
     elif N_cluster == 10000:
         initial_infections_per_cluster = 40
+    elif N_cluster == 500:
+        initial_infections_per_cluster = 2
     if eit <= initial_infections_per_cluster / N_cluster:
         raise NameError("Script assumes expected It / N strictly < initial infections per cluster / N.")
     # Joel C Miller's methods to estimate_R0 ----------------------------------

@@ -13,7 +13,7 @@ cutoff = 150
 alpha = 0.05
 num_bootstrap_sample = 1
 assignment_mechanisms = c('0.05_trad', '0.05_trad')
-N_assignment_mechanism_sets = 7
+N_assignment_mechanism_sets = 11
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
 R0_vax = 1.1
 vaxEff = 0.8
@@ -30,7 +30,7 @@ for (assignment_mechanism in assignment_mechanisms) {
   assign_type <- strsplit(assignment_mechanism, '_')[[1]][2]
   to_use <- c()
   for (sim_num in 0:(N_sims - 1)) {
-    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_antici_revision.csv'))
+    test_cluster <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', sim_num, '_SEIR_antici_revision.csv'))
     if (test_cluster$node[1] != 'na') {
       to_use <- c(to_use, sim_num)
     }
@@ -58,7 +58,7 @@ run_trial <- function(trial_num) {
   for (realized_assign in rep(assignment_mechanisms, N_groups / length(assignment_mechanisms))) {
     assign_frac <- strsplit(realized_assign, '_')[[1]][1]
     assign_type <- strsplit(realized_assign, '_')[[1]][2]
-    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt3_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici_revision.csv'))
+    cluster_for_trial <- read.csv(paste0('~/netVax/code_output/twostage/sims/2stg_N1000_k1_R0wt2_R0vax', R0_vax, '_eit0.005_vaxEff', vaxEff, '_assign', assign_frac, '_assigntype', assign_type, '_sim', clusters_to_use_final[clusters_to_use_dex], '_SEIR_antici_revision.csv'))
     trial_dfs[[clusters_to_use_dex]] <- cluster_for_trial
     clusters_to_use_dex <- clusters_to_use_dex + 1
   }
