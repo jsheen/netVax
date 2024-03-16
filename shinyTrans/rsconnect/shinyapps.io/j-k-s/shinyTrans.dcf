@@ -1,0 +1,13 @@
+name: shinyTrans
+title: shinyTrans
+username: j-k-s
+account: j-k-s
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10927016
+bundleId: 8380058
+url: https://j-k-s.shinyapps.io/shinyTrans/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app_scratch.R
