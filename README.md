@@ -11,9 +11,6 @@ Simulation study to identify indirect protection of vaccination with a transmiss
 ### sim: 
 - Scripts used to create simulation bank for analysis. sim_twostage_SEIR_antici_revision.py creates simulations for overdispersed contact structures where trials are anticipatory, sim_twostage_SEIR_Pois_antici_revision.py creates simulations for Poisson contact structures where trials are anticipatory, and sim_twostage_SEIR_Pois_revision.py creates simulations for Poisson contact structures where trials are reactionary.
 - Users can specify the following epidemiological parameters for the set of simulations they wish to create: number of animals per cluster, R0 of the wildtype pathogen, R0 of the vaccine, vaccine efficacy, percentage initially vaccinated, whether the vaccine is traditional or transmissible, and the number of simulations users wish to create.
-### testing: 
-- Miscellaneous scripts used for testing. These include code to look at the variation in infection burden across simulations and plotting the degree distribution of networks.
-
 ## code_output
 ### prelim: 
 - Preliminary data necessary for simulations, i.e., transmission rate that corresponds to the input R0 for each type of network structure. See above section "code/twostage/prelim" for more details.
@@ -22,6 +19,9 @@ Simulation study to identify indirect protection of vaccination with a transmiss
 ### twostage/sims: 
 - All simulations output by scripts in "code/twostage/sim"
 
+## shinyTrans
+- app.R: code for Shiny app to get required sample sizes of trials comparing transmissible vaccines to traditional vaccines. The app is available at https://j-k-s.shinyapps.io/shinyTrans/
+
 These programs are a work in progress, as we work to improve usability, error-catching, and speed of analysis. If you find errors, please contact Justin Sheen at jsheen (at) princeton (dot) edu.
 
-Last Update: March 10, 2024
+Last Update: March 16, 2024
