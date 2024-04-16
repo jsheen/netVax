@@ -128,12 +128,13 @@ for sim in range(nsim):
     plt.plot(new_t_trt, new_R_trt / 1000, 'orange')
     plt.xlim(0, cutoff)
     plt.ylim(-0.05, 1)
-    plt.xlabel('Days after initial outbreak', fontdict={'size':20})
-    plt.ylabel('Cumulative incidence', fontdict={'size':20})
+    plt.xlabel('', fontdict={'size':20})
+    plt.ylabel('', fontdict={'size':20})
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     plt.text(4.5, 0.95, 'Anticipatory Trial\nNo Overdispersion', fontsize=17,
         verticalalignment='top', bbox=props)
-   
+plt.savefig(home + "/netVax/code_output/figs/pan1.png", format="png", dpi=400)
+plt.show()
        

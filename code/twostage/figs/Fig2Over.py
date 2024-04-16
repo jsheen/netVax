@@ -116,6 +116,7 @@ for sim in range(nsim):
             raise NameError("Error in assignment.")
         full_second_half_con = EoN.Gillespie_simple_contagion(G, H, J, curr_IC_con, return_statuses, tmax = float(500), return_full_data=True)    
         full_second_half_trt = EoN.Gillespie_simple_contagion(G, H, J, curr_IC, return_statuses, tmax = float(500), return_full_data=True)    
+        
         # Control
         plt.plot(full_second_half_con.t(), np.array(full_second_half_con.R()) / 1000, 'grey')
         plt.xlim(0, cutoff)

@@ -124,15 +124,16 @@ for sim in range(nsim):
         new_t_trt = np.append(new_t_trt, 150)
         new_R_trt = np.append(new_R_trt, new_R_trt[-1])
     # Vaccination increase
-    plt.plot(full_second_half_con.t(), np.array(full_second_half_con.R()) / 1000, 'grey')
-    plt.plot(full_second_half_trt.t(), np.array(full_second_half_trt.R()) / 1000, 'orange')
+    plt.plot(new_t_con, new_R_con / 1000, 'grey')
+    plt.plot(new_t_trt, new_R_trt / 1000, 'orange')
     plt.xlim(0, cutoff)
     plt.ylim(-0.05, 1)
-    plt.xlabel('Days after initial outbreak', fontdict={'size':20})
-    plt.ylabel('Cumulative incidence', fontdict={'size':20})
+    plt.xlabel('', fontdict={'size':20})
+    plt.ylabel('', fontdict={'size':20})
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     plt.text(4.5, 0.95, 'Anticipatory Trial\nOverdispersion', fontsize=17,
         verticalalignment='top', bbox=props)
-        
+plt.savefig(home + "/netVax/code_output/figs/pan3.png", format="png", dpi=400)
+plt.show()

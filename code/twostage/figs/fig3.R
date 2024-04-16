@@ -213,8 +213,8 @@ pan3res2 <- sapply(pan3_xs, getSampSize, n = n, q = q, i0 = i0, r0t = r0t,
                    phi_trans = phi_trans, sampN = sampN, diff_init_vax_unvax = FALSE)
 
 # Plot fig
-png(file="~/netVax/code_output/figs/fig3.png",
-    width=8, height=3, units="in", res=400)
+tiff(file="~/netVax/code_output/figs/fig3.tiff",
+    width=8, height=3, units="in", res= 400)
 par(mfrow = c(1, 3))
 plot(pan1_xs, pan1res1, type='l', 
      ylab='Required number of clusters',
