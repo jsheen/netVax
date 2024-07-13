@@ -4,6 +4,7 @@ Simulation study to identify indirect protection of vaccination with a transmiss
 ## shinyTrans
 - app.R: Code for Shiny app to get required sample sizes of trials comparing transmissible vaccines to traditional vaccines. The app is available at https://j-k-s.shinyapps.io/shinyTrans/
 ## code/twostage/
+The following are scripts used to obtain the required sample sizes through simulation. The workflow is: first obtaining necessary preliminary parameters based on user-input parameters using the files in the folder "prelim." Next, simulated epidemics for clusters of animals are created and information saved with the files in "sim/revision." The simulated epidemics for clusters of animals are then analyzed using the files in "analysis/revision." Figures pertaining to the paper are created using the files in "figs."
 ### prelim: 
 - Scripts used to create preliminary data, i.e., transmission rate that corresponds to the input R0 for each type of network structure. getPrelim\_SEIR_Pois.py obtains these parameters when the contact structure is Poisson distributed while getPrelim\_SEIR.py obtains these parameters when the contact structure is overdispersed (k=1).
 - Within each script the user supplies a vector of the following parameters (1) Ns: the number of animals within each cluster (2) overdispersions: the parameter k to parameterize the amount of overdispersion (3) R0s: the R0 of the wildtype pathogen. All combinations of these user supplied parameter vectors are then created.
