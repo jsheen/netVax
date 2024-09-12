@@ -3,6 +3,7 @@
 Simulation study to identify indirect protection of vaccination with a transmissible vaccine.
 ## shinyTrans
 - app.R: Code for Shiny app to get required sample sizes of trials comparing transmissible vaccines to traditional vaccines. The app is available at https://j-k-s.shinyapps.io/shinyTrans/
+- This code can be adapted to include further estimands and estimators of interest. Within app.R, in the function getSampSize(), final sizes are obtained using the helper functions getFinalSize() and getDiffFinalSize(). One could define estimands of interest using these final sizes calculated much as we have done to define our causal and statistical estimands (there are comments for each estimand within the R script). The estimand can then be supplied in the return argument of getSampeSize() and pasted into the HTML script to display the result at the bottom of the function renderPlot().
 ## code/twostage/
 The following are scripts used to obtain the required sample sizes through simulation. The workflow is: first obtaining necessary preliminary parameters based on user-input parameters using the files in the folder "prelim." Next, simulated epidemics for clusters of animals are created and information saved with the files in "sim/revision." The simulated epidemics for clusters of animals are then analyzed using the files in "analysis/revision." Figures pertaining to the paper are created using the files in "figs."
 ### prelim: 
