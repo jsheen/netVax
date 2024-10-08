@@ -7,7 +7,7 @@ library("RcppAlgos")
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
+N_trials = 3000 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 150
 alpha = 0.05

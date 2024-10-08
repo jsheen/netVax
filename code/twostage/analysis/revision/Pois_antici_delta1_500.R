@@ -7,16 +7,16 @@ library("RcppAlgos")
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
+N_trials = 3000 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 150
 alpha = 0.05
 num_bootstrap_sample = 1
 reactionary_or_anticipatory = '_antici_'
 assignment_mechanisms = c('0.05_trad', '0.05_trad')
-N_assignment_mechanism_sets = 14
+N_assignment_mechanism_sets = 8
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.9
+R0_vax = 1.1
 vaxEff = 1
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')

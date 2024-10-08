@@ -7,16 +7,16 @@ library("RcppAlgos")
 set.seed(0)
 N_sims = 2000 # Total number of cluster simulations in simulation bank
 N_sample = 100 # Number sampled from each cluster
-N_trials = 1000 # Number of trial simulations to conduct
+N_trials = 3000 # Number of trial simulations to conduct
 n_perm = 1000
 cutoff = 150
 alpha = 0.05
 num_bootstrap_sample = 1
-reactionary_or_anticipatory = '_antici_'
-assignment_mechanisms = c('0.05_trad', '0.05_trans')
+reactionary_or_anticipatory = '_'
+assignment_mechanisms = c('0.05_trad', '0.05_trad')
 N_assignment_mechanism_sets = 5
 N_groups = length(assignment_mechanisms) * N_assignment_mechanism_sets
-R0_vax = 0.9
+R0_vax = 1.1
 vaxEff = 0.8
 if (N_groups %% length(assignment_mechanisms) != 0) {
   stop('The number of groups should be divisible by the number of assignment mechanisms.')
@@ -168,6 +168,17 @@ run_trial <- function(trial_num) {
             perms_hist <- c(perms_hist, calc_est(temp_to_analyze))
           }
           pval <- 1 - (length(which(perms_hist < est)) / length(perms_hist))
+          ordered_perms <- perms_hist[order(perms_hist)]
+          uniq_ordered_perms <- unique(perms_hist[order(perms_hist)])
+          for (perm_i in 1:length(uniq_ordered_perms)) {
+            test_val <- tail(which(ordered_perms == uniq_ordered_perms[perm_i]),n=1) / length(ordered_perms)
+            if (test_val >= 0.95) {
+              #print(test_val)
+              #print(perm_i)
+              write.csv(c(1 - test_val), paste0('~/netVax/scratch/test_effp_', trial_num, '.csv'))
+              break
+            }
+          }
         } else {
           perms_hist <- c()
           for (perm_dex in 1:n_perm) {
