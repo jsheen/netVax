@@ -35,4 +35,4 @@ The following are scripts used to obtain the required sample sizes through simul
 
 These programs are a work in progress, as we work to improve usability, error-catching, and speed of analysis. If you find errors, please contact Justin Sheen at jsheen (at) princeton (dot) edu.
 
-Last Update: July 12, 2024
+Last Update: October 8, 2024
