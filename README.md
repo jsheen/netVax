@@ -1,6 +1,7 @@
 # netVax
 
-Simulation study to identify indirect protection of vaccination with a transmissible vaccine.
+Simulation study to identify indirect protection of vaccination with a transmissible vaccine. Accompanies Sheen, Kennedy-Shaffer, Levy, Metcalf (2025) Design of field trials for the evaluation of transmissible vaccines in animal populations.
+
 ## shinyTrans
 - app.R: Code for Shiny app to get required sample sizes of trials comparing transmissible vaccines to traditional vaccines. The app is available at https://j-k-s.shinyapps.io/shinyTrans/
 - This code can be adapted to include further estimands and estimators of interest. Within app.R, in the function getSampSize(), final sizes are obtained using the helper functions getFinalSize() and getDiffFinalSize(). One could define estimands of interest using these final sizes calculated much as we have done to define our causal and statistical estimands (there are comments for each estimand within the R script). The estimand can then be supplied in the return argument of getSampeSize() and pasted into the HTML script to display the result at the bottom of the function renderPlot().
@@ -35,4 +36,4 @@ The following are scripts used to obtain the required sample sizes through simul
 
 These programs are a work in progress, as we work to improve usability, error-catching, and speed of analysis. If you find errors, please contact Justin Sheen at jsheen (at) princeton (dot) edu.
 
-Last Update: October 8, 2024
+Last Update: February 3, 2025
